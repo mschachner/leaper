@@ -1,0 +1,18 @@
+{
+    "python.defaultInterpreterPath": "/private/var/tmp/sage-10.7-current/local/bin/python3",
+    "python.analysis.extraPaths": [
+        "/Users/mark/Library/SageMath-10-7/lib/python3.13/site-packages",
+        "/private/var/tmp/sage-10.7-current/local/lib/python3.13/site-packages",
+        "/private/var/tmp/sage-10.7-current/local/lib/python3.13",
+        "${workspaceFolder}/src"
+    ],
+    "python.autoComplete.extraPaths": [
+        "/Users/mark/Library/SageMath-10-7/lib/python3.13/site-packages",
+        "/private/var/tmp/sage-10.7-current/local/lib/python3.13/site-packages",
+        "/private/var/tmp/sage-10.7-current/local/lib/python3.13",
+        "${workspaceFolder}/src"
+    ],
+    "python.envFile": "${workspaceFolder}/sagemath.env"
+}
+
+

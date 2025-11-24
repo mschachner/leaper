@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "leaper"
+version = "0.1.0"
+description = "Utilities for calculating leap groups."
+authors = [{ name = "Mark" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas",
+]
+
+[project.urls]
+Home = "https://example.com"
+
+[tool.setuptools.packages.find]
+where = ["src"]

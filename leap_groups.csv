@@ -1,0 +1,8 @@
+name,vertices,edges,chromatic_number,leap_1_structure,leap_1_order,leap_2_structure,leap_2_order
+@,1,0,1,,,,
+A?,2,0,1,,,,
+A_,2,1,2,,,,
+B?,3,0,1,,,,
+BO,3,1,2,,,,
+BW,3,2,2,,,,
+Bw,3,3,3,,,,
