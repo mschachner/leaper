@@ -81,6 +81,15 @@ def compute_leap_groups(max_vertices, directed=False, max_degree=2, images=False
     """
     import os
     
+    # Load graph names from CSV
+    graph_names = {}
+    try:
+        if os.path.exists('graphNames.csv'):
+            names_df = pd.read_csv('graphNames.csv')
+            graph_names = dict(zip(names_df['Graph6'], names_df['Name']))
+    except Exception as e:
+        print(f"Warning: Could not load graphNames.csv: {e}")
+
     data = []
     
     if images and not os.path.exists('images'):
@@ -93,15 +102,23 @@ def compute_leap_groups(max_vertices, directed=False, max_degree=2, images=False
             gen = DiGraphs(v)
         else:
             gen = graphs.nauty_geng(str(v))
-        print(f"Generated {len(gen)} graphs")
-        print(f"Graphs: {gen}")
         for G in gen:
             row = {}
-            # Use graph6/dig6 string as name if not named (common for generated graphs)
-            name = G.name()
-            if not name:
-                name = G.dig6_string() if directed else G.graph6_string()
-            row['name'] = name
+            
+            # Canonicalize the graph to ensure consistent graph6 string lookup
+            canon_G = G.canonical_label()
+            
+            # Determine graph6/dig6 string
+            g6 = canon_G.dig6_string() if directed else canon_G.graph6_string()
+            
+            # Look up name in graphNames.csv, fallback to existing name or g6 string
+            if g6 in graph_names:
+                row['name'] = graph_names[g6]
+            else:
+                name = G.name()
+                if not name:
+                    name = g6
+                row['name'] = name
             
             row['vertices'] = G.order()
             row['edges'] = G.size()
