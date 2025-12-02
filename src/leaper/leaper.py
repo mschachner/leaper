@@ -18,37 +18,39 @@ def is_hop(G, p):
     """
     Return True if the permutation ``p`` is a hop on the graph ``G``.
     """
-    print(f"Checking if {p} is a hop on {G.name()}")
-    return all(p(i) in G.neighbors(p(i)) for i in range(G.order()))
+    return all(p[v] in G.neighbors(v) for v in G.vertices())
 
 def hops(G):
     """
-    Return a list of all the hops on the graph ``G``.
+    Return a list of all the hops on the graph ``G`` as standard permutations
+    of {1, ..., n}, where n = |V(G)|.
     """
-    return [p for p in Permutations(G.order()) if is_hop(G, p)]
+    verts = sorted(G.vertices())
+    v_to_i = {v: i + 1 for i, v in enumerate(verts)}
+
+    hop_perms = []
+    for p in Permutations(verts):  # combinatorial permutations on the actual vertices
+        if is_hop(G, p):
+            # convert to one-line notation on {1,...,n}
+            images = [v_to_i[p[v]] for v in verts]
+            hop_perms.append(Permutation(images))  # standard permutation
+    return hop_perms
 
 def compositions(h, n):
     """
     Given a list of permutations, return the compositions of the permutations of length ``n``.
     """
-    if n == 0:
-        return [Permutation()]
+    if n == 1:
+        return h
     else:
         return [p * q for p in h for q in compositions(h, n-1)]
 
 def leap_n(G, n):
     """
     Return the nth leap group of the graph ``G``.
-
-    EXAMPLES::
-
-        
     """
-    print(f"Computing leap_{n} group for {G.name()}")
     h = hops(G)
-    print(f"Hops: {h}")
     hn = compositions(h, n)
-    print(f"Compositions: {hn}")
     return PermutationGroup(hn)
 
 def leap_group(G):
