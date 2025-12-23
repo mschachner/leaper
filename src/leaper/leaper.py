@@ -65,7 +65,7 @@ def leap_2(G):
     """
     return leap_n(G, 2)
 
-def compute_leap_groups(max_vertices, directed=False, max_degree=2, images=False):
+def compute_leap_groups(max_vertices, output_dir, directed=False, max_degree=2, images=False):
     """
     Compute the following for all (directed or undirected) graphs with at most ``max_vertices`` vertices:
     - The name of the graph
@@ -77,32 +77,38 @@ def compute_leap_groups(max_vertices, directed=False, max_degree=2, images=False
         - The structure description of the nth leap group
         - The order of the nth leap group
     
-    Outputs as a csv. If ``images`` is True, then the images are saved as png files in a directory called 'images', and the path to the respective image is added to the csv.
+    Outputs as a csv in ``output_dir``. If ``images`` is True, then the images are saved as png files in a directory called 'images' within ``output_dir``, and the path to the respective image is added to the csv.
     """
     import os
-    
-    # Load graph names from CSV
-    graph_names = {}
     try:
-        if os.path.exists('graphNames.csv'):
-            names_df = pd.read_csv('graphNames.csv')
-            graph_names = dict(zip(names_df['Graph6'], names_df['Name']))
-    except Exception as e:
-        print(f"Warning: Could not load graphNames.csv: {e}")
+        from graphsCanonical import CANONICAL_NAME
+    except ImportError:
+        print("Warning: Could not import CANONICAL_NAME from graphsCanonical.py")
+        CANONICAL_NAME = {}
 
     data = []
     
-    if images and not os.path.exists('images'):
-        os.makedirs('images')
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    images_dir = os.path.join(output_dir, 'images')
+    if images and not os.path.exists(images_dir):
+        os.makedirs(images_dir)
         
     img_counter = 0
+    total_graphs = 0
     
     for v in range(1, max_vertices + 1):
+        print(f"Processing graphs with {v} vertices...")
         if directed:
             gen = DiGraphs(v)
         else:
             gen = graphs.nauty_geng(str(v))
         for G in gen:
+            total_graphs += 1
+            if total_graphs % 100 == 0:
+                print(f"Processed {total_graphs} graphs...")
+                
             row = {}
             
             # Canonicalize the graph to ensure consistent graph6 string lookup
@@ -111,14 +117,20 @@ def compute_leap_groups(max_vertices, directed=False, max_degree=2, images=False
             # Determine graph6/dig6 string
             g6 = canon_G.dig6_string() if directed else canon_G.graph6_string()
             
-            # Look up name in graphNames.csv, fallback to existing name or g6 string
-            if g6 in graph_names:
-                row['name'] = graph_names[g6]
+            # Look up name in CANONICAL_NAME, fallback to generated name
+            if g6 in CANONICAL_NAME:
+                row['name'] = CANONICAL_NAME[g6]
             else:
-                name = G.name()
-                if not name:
-                    name = g6
-                row['name'] = name
+                existing_name = G.name()
+                if existing_name:
+                    row['name'] = existing_name
+                else:
+                    # Generate name like "(n,m) graph #K"
+                    # We can use img_counter as a unique K since it increments for every graph
+                    # Note: img_counter is incremented later if images is True, but we can rely on total_graphs
+                    # However, total_graphs is reset each run. If we want global uniqueness across calls we'd need more state.
+                    # Assuming K just needs to be unique within this run/output.
+                    row['name'] = f"({G.order()},{G.size()}) graph #{total_graphs}"
             
             row['vertices'] = G.order()
             row['edges'] = G.size()
@@ -129,10 +141,11 @@ def compute_leap_groups(max_vertices, directed=False, max_degree=2, images=False
                 row['chromatic_number'] = None
             
             if images:
-                image_path = os.path.join('images', f"graph_{img_counter}.png")
+                image_filename = f"graph_{img_counter}.png"
+                image_path = os.path.join(images_dir, image_filename)
                 try:
                     G.plot().save(image_path)
-                    row['image_path'] = image_path
+                    row['image_path'] = os.path.join('images', image_filename)
                 except Exception:
                     row['image_path'] = None
                 img_counter += 1
@@ -149,4 +162,5 @@ def compute_leap_groups(max_vertices, directed=False, max_degree=2, images=False
                     
             data.append(row)
             
-    pd.DataFrame(data).to_csv('leap_groups.csv', index=False)
+    csv_path = os.path.join(output_dir, 'leap_groups.csv')
+    pd.DataFrame(data).to_csv(csv_path, index=False)
