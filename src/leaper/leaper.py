@@ -145,7 +145,9 @@ def compute_leap_groups(max_vertices, output_dir, directed=False, max_degree=2, 
                 image_path = os.path.join(images_dir, image_filename)
                 try:
                     G.plot().save(image_path)
-                    row['image_path'] = os.path.join('images', image_filename)
+                    # Use absolute URL for image path in CSV
+                    base_url = "https://raw.githubusercontent.com/mschachner/leaper/main/results/"
+                    row['image_path'] = f"{base_url}images/{image_filename}"
                 except Exception:
                     row['image_path'] = None
                 img_counter += 1
