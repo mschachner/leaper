@@ -9,7 +9,7 @@ EXAMPLES::
 """
 from sage.all import *
 from sage.graphs.all import graphs
-import pandas as pd  # type: ignore
+import pandas as pd   
 from sage.graphs.digraph_generators import DiGraphGenerators
 DiGraphs = DiGraphGenerators()
 
@@ -166,3 +166,31 @@ def compute_leap_groups(max_vertices, output_dir, directed=False, max_degree=2, 
             
     csv_path = os.path.join(output_dir, 'leap_groups.csv')
     pd.DataFrame(data).to_csv(csv_path, index=False)
+
+def extending_hops(G, h):
+    """
+    Given a graph ``G`` and a partial permutation ``h`` on the vertices of ``G``, return the extending hops on ``G`` that extend ``h``.
+    """
+    for p in hops(G):
+        for v in G.vertices():
+            if h[v] is not None and p[v] != h[v]:
+                break
+        else:
+            yield p
+
+def is_leap_minimal(G):
+    """
+    Return True if every edge of ``G`` gets used in a hop.
+    """
+    for e in G.edges():
+        v, w = e
+        if not any(p[v] == w or p[w] == v for p in hops(G)):
+            return False
+    return True
+
+def leap_minimal_core(G):
+    """
+    Delete all edges of ``G`` that are not used in a hop.
+    """
+    return G.subgraph(edges=[(v, w) for v, w in G.edges() if any(p[v] == w or p[w] == v for p in hops(G))])
+
