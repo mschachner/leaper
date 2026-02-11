@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import cytoscape from 'cytoscape';
+import { serializeGraph, deserializeGraph, validateGraphData } from './graphFile';
+import { saveAs, save, openFile, clearFileHandle } from './fileAccess';
 
 
 let nextNodeId = 0;
@@ -10,6 +12,8 @@ function App() {
   const containerRef = useRef(null); // reference to the HTML div
   const [mode, setMode] = useState('select');
   const [edgeSource, setEdgeSource] = useState(null);
+  const [fileName, setFileName] = useState(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   const undoStack = useRef([]);
   const redoStack = useRef([]);
@@ -138,6 +142,25 @@ function App() {
     return () => cy.destroy()
   }, []);
 
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const markDirty = () => setIsDirty(true);
+    cy.on('add remove position', markDirty);
+  }, []);
+
+  useEffect(() => {
+    const onBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
+
   const handleTap = useCallback((evt) => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -196,6 +219,67 @@ function App() {
     relabelNodes();
   }, [relabelNodes]);
 
+  const handleSave = useCallback(async () => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const graphData = serializeGraph(cy, fileName || 'Untitled');
+    const json = JSON.stringify(graphData, null, 2);
+    const name = await save(json);
+    setFileName(name);
+    setIsDirty(false);
+  }, [fileName])
+
+  const handleSaveAs = useCallback(async () => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const graphData = serializeGraph(cy, fileName || 'Untitled');
+    const json = JSON.stringify(graphData, null, 2);
+    const name = await saveAs(json);
+    setFileName(name);
+    setIsDirty(false);
+  }, [fileName])
+
+  const handleOpen = useCallback(async () => {
+    const confirmMsg = 'You have unsaved changes. Open a different graph anyway?';
+    if (isDirty && !window.confirm(confirmMsg)) {
+      return;
+    }
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const { data, name } = await openFile();
+
+    const error = validateGraphData(data);
+    if (error) {
+      alert(`Couldn't load ${name}: ${error}`);
+      return;
+    }
+
+    deserializeGraph(cy,data);
+    const maxId = Math.max(-1, ...data.vertices.map((v) => v.id));
+    nextNodeId = maxId + 1;
+
+
+    setFileName(name);
+    setIsDirty(false);
+  }, [isDirty])
+
+  const handleNew = useCallback(() => {
+    const confirmMsg = 'You have unsaved changes. Start a new graph anyway?';
+    if (isDirty && !window.confirm(confirmMsg)) {
+      return;
+    }
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.elements().remove();
+    clearFileHandle();
+    setFileName(null);
+    setIsDirty(false);
+    nextNodeId = 0;
+  }, [isDirty]);
+
 
   // Keyboard listeners
   useEffect(() => {
@@ -216,11 +300,26 @@ function App() {
         redo();
         relabelNodes();
       }
+
+      if ((evt.metaKey || evt.ctrlKey) && evt.key === 's' && !evt.shiftKey) {
+        evt.preventDefault();
+        handleSave();
+      }
+
+      if ((evt.metaKey || evt.ctrlKey) && evt.key === 's' && evt.shiftKey) {
+        evt.preventDefault();
+        handleSaveAs();
+      }
+
+      if ((evt.metaKey || evt.ctrlKey) && evt.key === 'o') {
+        evt.preventDefault();
+        handleOpen();
+      }
       
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleDelete, saveSnapshot, undo, redo, relabelNodes]);
+  }, [handleDelete, saveSnapshot, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen]);
 
   // Toolbar.
 
@@ -248,9 +347,41 @@ function App() {
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column' }}>
+
+      {/* Menu bar */}
+      <div style={{
+        padding: '6px 12px',
+        display: 'flex',
+        gap: '8px',
+        alignItems: 'center',
+        borderBottom: '1px solid #ddd',
+        background: '#f8f8f8'
+      }}>
+        <button onClick={handleNew}>New</button>
+        <button onClick={handleOpen}>Open</button>
+        <button onClick={handleSave}>Save</button>
+        <button onClick={handleSaveAs}>Save As</button>
+        <span style={{
+          marginLeft: '12px',
+          color: '#666',
+          fontSize: '14px'
+        }}>
+          {fileName ? fileName : 'Untitled.leap'}{isDirty ? ' •' : ''}
+        </span>
+      </div>  
+      
       {/* Toolbar */}
-      <div style={{ padding: '8px 12px', display: 'flex', gap: '8px', borderBottom: '1px solid #ddd' }}>
+      <div style={{
+        padding: '8px 12px',
+        display: 'flex',
+        gap: '8px',
+        borderBottom: '1px solid #ddd' 
+        }}>
 
         {/* Mode buttons */}
         <button style={buttonStyle('select')} onClick={() => { setMode('select'); setEdgeSource(null); }}>Select</button>
@@ -260,7 +391,11 @@ function App() {
 
         {/* Layout selector */}
 
-        <select style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+        <select style={{
+          padding: '8px',
+          borderRadius: '4px',
+          border: '1px solid #ccc' 
+        }}
           defaultValue=""
           onChange={(e) => {
             if (e.target.value && cyRef.current) {
@@ -278,7 +413,12 @@ function App() {
 
       {/* Compute leap group button */}
 
-      <button style={{ ...buttonStyle('compute'), background: '#27ae60', color: '#fff', borderColor: '#27ae60', marginLeft: 'auto'}}
+      <button style={{
+        ...buttonStyle('compute'),
+        background: '#27ae60',
+        color: '#fff',
+        borderColor: '#27ae60',
+        marginLeft: 'auto'}}
         onClick={async () => {
           const graphData = getGraphData();
           if (!graphData || graphData.vertices.length === 0) {
