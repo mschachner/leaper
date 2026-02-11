@@ -3,6 +3,8 @@ import cytoscape from 'cytoscape';
 import { serializeGraph, deserializeGraph, validateGraphData } from './graphFile';
 import { saveAs, save, openFile, clearFileHandle } from './fileAccess';
 
+import ControlPanel from './ControlPanel';
+
 
 let nextNodeId = 0;
 
@@ -410,47 +412,32 @@ function App() {
         <option value="breadthfirst">Tree</option>
         <option value="cose">Force-Directed</option>
       </select>
-
-      {/* Compute leap group button */}
-
-      <button style={{
-        ...buttonStyle('compute'),
-        background: '#27ae60',
-        color: '#fff',
-        borderColor: '#27ae60',
-        marginLeft: 'auto'}}
-        onClick={async () => {
-          const graphData = getGraphData();
-          if (!graphData || graphData.vertices.length === 0) {
-            alert('Please add at least one vertex.');
-            return;
-          }
-          console.log(`Sending graph data:`, graphData);
-          try {
-            const resp = await fetch('http://localhost:8000/leap-group', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                vertices: graphData.vertices,
-                edges: graphData.edges,
-              }),
-            });
-            const result = await resp.json();
-            alert(`Leap group: ${result.structure}\nOrder: ${result.order}`);
-          } catch (error) {
-            alert(`Error: ${error.message}\n\nIs the backend running?`);
-          }
-        }}
-      >
-        Compute leap group
-      </button>
       </div>
 
-      {/* Graph canvas */}
-      <div ref={containerRef} style={{ flex: 1}} />
+      {/* Main area: canvas + sidebar */}
+
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden'
+      }}>
+        {/* Graph canvas */}
+        <div ref={containerRef} style={{ flex: 1}} />
+
+        {/* Sidebar */}
+        <div style={{
+        width: '300px',
+        borderLeft: '1px solid #ddd',
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#fafafa',
+        color: '#000',
+        overflowY: 'auto',
+      }}>
+        <ControlPanel getGraphData={getGraphData} cyRef = {cyRef} />
+        </div>
       </div>
+    </div>
   );
 }
 
