@@ -4,6 +4,7 @@ import { serializeGraph, deserializeGraph, validateGraphData } from './graphFile
 import { saveAs, save, openFile, clearFileHandle } from './fileAccess';
 
 import ControlPanel from './ControlPanel';
+import GraphLibraryModal from './graphLibraryModal';
 
 
 let nextNodeId = 0;
@@ -16,6 +17,7 @@ function App() {
   const [edgeSource, setEdgeSource] = useState(null);
   const [fileName, setFileName] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
 
   const undoStack = useRef([]);
   const redoStack = useRef([]);
@@ -282,6 +284,23 @@ function App() {
     nextNodeId = 0;
   }, [isDirty]);
 
+  const handleLoadFromLibrary = useCallback((graph) => {
+    const confirmMsg = 'You have unsaved changes. Load a library graph anyway?'
+    if (isDirty && !window.confirm(confirmMsg)) return;
+
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    deserializeGraph(cy, graph);
+
+    const maxId = Math.max(-1, ...graph.vertices.map((v) => v.id));
+    nextNodeId = maxId + 1;
+
+    clearFileHandle();
+    setFileName(null);
+    setIsDirty(false);
+    setLibraryOpen(false);
+  }, [isDirty]);
 
   // Keyboard listeners
   useEffect(() => {
@@ -317,23 +336,35 @@ function App() {
         evt.preventDefault();
         handleOpen();
       }
+
+      if (evt.key === 'Escape' && libraryOpen) {
+        setLibraryOpen(false);
+      }
       
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleDelete, saveSnapshot, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen]);
+  }, [handleDelete, saveSnapshot, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen, libraryOpen, setLibraryOpen]);
 
   // Toolbar.
 
-  const buttonStyle = (m) => ({
-    padding: '8px 16px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
+  const buttonStyleToolbar = (m) => ({
+    padding: '0px 8px',
+    borderRadius: '15px',
     background: mode === m ? '#4a90d9' : '#fff',
     color: mode === m ? '#fff' : '#333',
     cursor: 'pointer',
     fontWeight: mode === m ? 'bold' : 'normal',
   });
+
+  const buttonStyleMenu = {
+    padding: '0px 8px',
+    borderRight: '1px solid #333',
+    borderRadius: '0px',
+    background: '#fff',
+    color: '#333',
+    cursor: 'pointer',
+  }
 
   const getGraphData = useCallback(() => {
     const cy = cyRef.current;
@@ -357,17 +388,16 @@ function App() {
 
       {/* Menu bar */}
       <div style={{
-        padding: '6px 12px',
+        padding: '6px 0px',
         display: 'flex',
-        gap: '8px',
         alignItems: 'center',
-        borderBottom: '1px solid #ddd',
-        background: '#f8f8f8'
+        background: '#fff'
       }}>
-        <button onClick={handleNew}>New</button>
-        <button onClick={handleOpen}>Open</button>
-        <button onClick={handleSave}>Save</button>
-        <button onClick={handleSaveAs}>Save As</button>
+        <button onClick={handleNew} style={buttonStyleMenu}>New</button>
+        <button onClick={handleOpen} style={buttonStyleMenu}>Open</button>
+        <button onClick={handleSave} style={buttonStyleMenu}>Save</button>
+        <button onClick={handleSaveAs} style={buttonStyleMenu}>Save As</button>
+        <button onClick={() => setLibraryOpen(true)} style={buttonStyleMenu}>Library</button> 
         <span style={{
           marginLeft: '12px',
           color: '#666',
@@ -381,15 +411,15 @@ function App() {
       <div style={{
         padding: '8px 12px',
         display: 'flex',
+        background: 'transparent',
         gap: '8px',
-        borderBottom: '1px solid #ddd' 
         }}>
 
         {/* Mode buttons */}
-        <button style={buttonStyle('select')} onClick={() => { setMode('select'); setEdgeSource(null); }}>Select</button>
-        <button style={buttonStyle('addVertex')} onClick={() => setMode('addVertex')}>Add vertex</button>
-        <button style={buttonStyle('addEdge')} onClick={() => setMode('addEdge')}>Add edge</button>
-        <button style={buttonStyle('delete')} onClick={handleDelete}>Delete</button>
+        <button style={buttonStyleToolbar('select')} onClick={() => { setMode('select'); setEdgeSource(null); }}>Select</button>
+        <button style={buttonStyleToolbar('addVertex')} onClick={() => setMode('addVertex')}>Vertex</button>
+        <button style={buttonStyleToolbar('addEdge')} onClick={() => setMode('addEdge')}>Edge</button>
+        <button style={buttonStyleToolbar('delete')} onClick={handleDelete}>Delete</button>
 
         {/* Layout selector */}
 
@@ -437,6 +467,13 @@ function App() {
         <ControlPanel getGraphData={getGraphData} cyRef = {cyRef} />
         </div>
       </div>
+
+      {libraryOpen && (
+        <GraphLibraryModal
+          onLoad={handleLoadFromLibrary}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
     </div>
   );
 }
