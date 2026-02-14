@@ -5,6 +5,7 @@ import { saveAs, save, openFile, clearFileHandle } from './fileAccess';
 
 import ControlPanel from './ControlPanel';
 import GraphLibraryModal from './graphLibraryModal';
+import NotebookEntry from './NotebookEntry';
 
 
 let nextNodeId = 0;
@@ -18,7 +19,11 @@ function App() {
   const [fileName, setFileName] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
+  const [workspace, setWorkspace] = useState([]);
 
+
+  // Undo/redo helpers
   const undoStack = useRef([]);
   const redoStack = useRef([]);
 
@@ -48,6 +53,7 @@ function App() {
     cy.json({ elements: next });
   }, []);
 
+  // Relabeler method
   const relabelNodes = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -91,6 +97,22 @@ function App() {
     console.log(`Relabeled. Nodes are now ${cy.nodes().map((n) => n.id()).join(', ')}`);
   }, []);
 
+  // Workspace helpers
+  const addWorkspaceEntry = useCallback((entry) => {
+    setWorkspace((prev) => [...prev, entry]);
+    setIsDirty(true);
+  }, []);
+
+  const removeWorkspaceEntry = useCallback((id) => {
+    setWorkspace((prev) => prev.filter((e) => e.id !== id));
+    setIsDirty(true);
+  }, []);
+
+  const clearWorkspace = useCallback(() => {
+    setIsDirty(true);
+    setWorkspace([]);
+  }, []);
+
   useEffect(() => {
     const cy = cytoscape({
       container: containerRef.current,
@@ -121,6 +143,13 @@ function App() {
           style: {
             'background-color': '#f39c12',
             'text-outline-color': '#f39c12',
+          },
+        },
+        {
+          selector: 'node.hide-label',
+          style: {
+            'label': '',
+            'text-outline-width': 0,
           },
         },
         {
@@ -164,6 +193,57 @@ function App() {
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [isDirty]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    if (showLabels) {
+      cy.nodes().removeClass('hide-label');
+     } else {
+        cy.nodes().addClass('hide-label');
+      }
+  },[showLabels]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const onAdd = (evt) => {
+      if (evt.target.isNode && evt.target.isNode() && !showLabels) {
+        evt.target.addClass('hide-label');
+      }
+    };
+
+    cy.on('add', onAdd);
+    return () => cy.off('add', onAdd)
+  }, [showLabels]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    if (mode === 'select') {
+      cy.boxSelectionEnabled(true);
+      cy.userPanningEnabled(false);
+      cy.autoungrabify(false);
+    } else if (mode === 'pan') {
+      cy.boxSelectionEnabled(false);
+      cy.userPanningEnabled(true);
+      cy.autoungrabify(true);
+    } else {
+      cy.boxSelectionEnabled(false);
+      cy.userPanningEnabled(false);
+      cy.autoungrabify(false);
+    }
+  },[mode]);
+
+  useEffect(() => {
+    const el = document.getElementById('notebook-scroll');
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [workspace]);
 
   const handleTap = useCallback((evt) => {
     const cy = cyRef.current;
@@ -227,23 +307,23 @@ function App() {
     const cy = cyRef.current;
     if (!cy) return;
 
-    const graphData = serializeGraph(cy, fileName || 'Untitled');
+    const graphData = serializeGraph(cy, fileName || 'Untitled', { showLabels }, workspace);
     const json = JSON.stringify(graphData, null, 2);
     const name = await save(json);
     setFileName(name);
     setIsDirty(false);
-  }, [fileName])
+  }, [fileName, showLabels, workspace])
 
   const handleSaveAs = useCallback(async () => {
     const cy = cyRef.current;
     if (!cy) return;
 
-    const graphData = serializeGraph(cy, fileName || 'Untitled');
+    const graphData = serializeGraph(cy, fileName || 'Untitled', { showLabels }, workspace);
     const json = JSON.stringify(graphData, null, 2);
     const name = await saveAs(json);
     setFileName(name);
     setIsDirty(false);
-  }, [fileName])
+  }, [fileName, showLabels, workspace])
 
   const handleOpen = useCallback(async () => {
     const confirmMsg = 'You have unsaved changes. Open a different graph anyway?';
@@ -262,6 +342,10 @@ function App() {
     }
 
     deserializeGraph(cy,data);
+    if (data.settings?.showLabels !== undefined) {
+      setShowLabels(data.settings.showLabels);
+    }
+    setWorkspace(data.workspace || []);
     const maxId = Math.max(-1, ...data.vertices.map((v) => v.id));
     nextNodeId = maxId + 1;
 
@@ -281,6 +365,7 @@ function App() {
     clearFileHandle();
     setFileName(null);
     setIsDirty(false);
+    setWorkspace([]);
     nextNodeId = 0;
   }, [isDirty]);
 
@@ -300,6 +385,7 @@ function App() {
     setFileName(null);
     setIsDirty(false);
     setLibraryOpen(false);
+    setWorkspace([]);
   }, [isDirty]);
 
   // Keyboard listeners
@@ -416,6 +502,7 @@ function App() {
         }}>
 
         {/* Mode buttons */}
+        <button style={buttonStyleToolbar('pan')} onClick={() => { setMode('pan'); setEdgeSource(null); }}>Pan</button>
         <button style={buttonStyleToolbar('select')} onClick={() => { setMode('select'); setEdgeSource(null); }}>Select</button>
         <button style={buttonStyleToolbar('addVertex')} onClick={() => setMode('addVertex')}>Vertex</button>
         <button style={buttonStyleToolbar('addEdge')} onClick={() => setMode('addEdge')}>Edge</button>
@@ -431,7 +518,12 @@ function App() {
           defaultValue=""
           onChange={(e) => {
             if (e.target.value && cyRef.current) {
-              cyRef.current.layout({ name: e.target.value, animate: true }).run();
+              cyRef.current.layout({
+                name: e.target.value,
+                animate: true,
+                animationDuration: 500,
+                animationEasing: 'ease-out',
+              }).run();
               e.target.value = '';
             }
           }}
@@ -441,7 +533,22 @@ function App() {
         <option value="grid">Grid</option>
         <option value="breadthfirst">Tree</option>
         <option value="cose">Force-Directed</option>
-      </select>
+        </select>
+
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          fontSize: '14px',
+          cursor: 'pointer'
+        }}>
+          <input
+            type="checkbox"
+            checked={showLabels}
+            onChange={(e) => setShowLabels(e.target.checked)}
+          />
+            Labels
+          </label>  
       </div>
 
       {/* Main area: canvas + sidebar */}
@@ -456,24 +563,84 @@ function App() {
 
         {/* Sidebar */}
         <div style={{
-        width: '300px',
-        borderLeft: '1px solid #ddd',
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#fafafa',
-        color: '#000',
-        overflowY: 'auto',
+          width: '300px',
+          borderLeft: '1px solid #ddd',
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#fafafa',
+          color: '#000',
+          overflowY: 'hidden',
       }}>
-        <ControlPanel getGraphData={getGraphData} cyRef = {cyRef} />
-        </div>
-      </div>
+          {/* Compute buttons */}
+          <ControlPanel getGraphData={getGraphData} addEntry={addWorkspaceEntry} />
 
-      {libraryOpen && (
-        <GraphLibraryModal
-          onLoad={handleLoadFromLibrary}
-          onClose={() => setLibraryOpen(false)}
-        />
-      )}
+          {/* Notebook header */}
+          <div style={{
+            padding: '8px 16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid #ddd',
+          }}>
+            <span style={{
+              fontSize: '12px',
+              color: '#888',
+              textTransform: 'uppercase'
+            }}>
+              Workspace
+            </span>
+            {workspace.length > 0 && (
+              <button
+                onClick={clearWorkspace}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#aaa',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+
+          {/* Scrollable notebook entries */}
+          <div
+            id="notebook-scroll"
+            style={{
+              flex: 1,
+              overflowY: 'auto'
+            }}
+          >
+            {workspace.length === 0 ? (
+              <div style={{
+                padding: '24px 16px',
+                color: '#bbb',
+                fontSize: '13px',
+                textAlign: 'center'
+              }}>
+                Run a computation to see results here.
+              </div>
+            ) : (
+              workspace.map((entry) => (
+                <NotebookEntry
+                  key={entry.id}
+                  entry={entry}
+                  onRemove={removeWorkspaceEntry}
+                />
+              ))
+            )}
+            </div>
+        </div>
+    </div>
+
+    {libraryOpen && (
+      <GraphLibraryModal
+        onLoad={handleLoadFromLibrary}
+        onClose={() => setLibraryOpen(false)}
+      />
+    )}
     </div>
   );
 }
