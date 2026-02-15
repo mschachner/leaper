@@ -14,6 +14,8 @@ let nextNodeId = 0;
 function App() {
   const cyRef = useRef(null);       // reference to the Cytoscape instance
   const containerRef = useRef(null); // reference to the HTML div
+  const isDraggingSidebar = useRef(false);
+
   const [mode, setMode] = useState('select');
   const [edgeSource, setEdgeSource] = useState(null);
   const [fileName, setFileName] = useState(null);
@@ -21,6 +23,11 @@ function App() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
   const [workspace, setWorkspace] = useState([]);
+  const [sidebarWidth, setSidebarWidth] = useState(300);
+  const [snapshotView, setSnapshotView] = useState(null);
+  const [selectedHop, setSelectedHop] = useState(null);
+  const [labelPerm, setLabelPerm] = useState(null);
+
 
 
   // Undo/redo helpers
@@ -82,7 +89,7 @@ function App() {
     nodeData.forEach(({ newId, position }) => {
       cy.add({
         group: 'nodes',
-        data: { id: newId },
+        data: { id: newId, displayLabel: newId },
         position: { x: position.x, y: position.y },
       });
     });
@@ -113,6 +120,35 @@ function App() {
     setWorkspace([]);
   }, []);
 
+  // Sidebar resizing
+
+  const onSidebarDragStart = useCallback((e) => {
+    isDraggingSidebar.current = true;
+    e.preventDefault();
+  }, [])
+
+  useEffect(() => {
+    const onMouseMove = (e) => {
+      if (!isDraggingSidebar.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setSidebarWidth(Math.max(275,Math.min(600,newWidth)));
+    };
+
+    const onMouseUp = () => {
+      isDraggingSidebar.current = false;
+    };
+    
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp)
+    };
+  }, []);
+
+
+  // Cytoscape initialization
   useEffect(() => {
     const cy = cytoscape({
       container: containerRef.current,
@@ -121,7 +157,7 @@ function App() {
         {
           selector: 'node',
           style: {
-            'label': 'data(id)',
+            'label': 'data(displayLabel)',
             'text-valign': 'center',
             'background-color': '#4a90d9',
             'color': '#fff',
@@ -167,14 +203,39 @@ function App() {
             'width': 3,
           },
         },
+        {
+          selector: '.hop-arrow',
+          style: {
+            'width': 2.5,
+            'line-color': '#e74c3c',
+            'target-arrow-color': '#e74c3c',
+            'target-arrow-shape': 'triangle',
+            'arrow-scale': 1.2,
+            'curve-style': 'bezier',
+            'control-point-step-size': 40,
+            'line-style': 'dashed',
+            'line-dash-pattern': [6,3],
+            'opacity': 0.85,
+          },
+        },
+        {
+          selector: '.hop-arrow-double',
+          style: {
+            'source-arrow-color': '#e74c3c',
+            'source-arrow-shape': 'triangle',
+          },
+        },
       ],
       layout: { name: 'preset' },
+      userZoomingEnabled: true,
+      wheelSensitivity: 0.3,
     });
 
     cyRef.current = cy;
     return () => cy.destroy()
   }, []);
 
+  // Tracking dirty state
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -194,6 +255,7 @@ function App() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [isDirty]);
 
+  // Text label hiding
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -219,6 +281,7 @@ function App() {
     return () => cy.off('add', onAdd)
   }, [showLabels]);
 
+  // Enable box selection
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -238,6 +301,31 @@ function App() {
     }
   },[mode]);
 
+  // Manual scroll-to-zoom (Cytoscape disables wheel zoom when panning is off)
+  useEffect(() => {
+    const container = containerRef.current;
+    const cy = cyRef.current;
+    if (!container || !cy) return;
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      const zoomFactor = 1 - e.deltaY * 0.003;
+      const rect = container.getBoundingClientRect();
+      const pos = cy.renderer().projectIntoViewport(
+        e.clientX - rect.left,
+        e.clientY - rect.top
+      );
+      cy.zoom({
+        level: cy.zoom() * zoomFactor,
+        renderedPosition: { x: e.clientX - rect.left, y: e.clientY - rect.top },
+      });
+    };
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => container.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Make workspace scrollable
   useEffect(() => {
     const el = document.getElementById('notebook-scroll');
     if (el) {
@@ -245,7 +333,9 @@ function App() {
     }
   }, [workspace]);
 
+  // Handle user actions
   const handleTap = useCallback((evt) => {
+    if (snapshotView) return; // No editing snapshots!
     const cy = cyRef.current;
     if (!cy) return;
 
@@ -256,7 +346,7 @@ function App() {
         saveSnapshot();
         cy.add({
           group: 'nodes',
-          data: { id },
+          data: { id, displayLabel: id },
           position: { x: pos.x, y: pos.y },
         });
       }
@@ -303,6 +393,181 @@ function App() {
     relabelNodes();
   }, [relabelNodes]);
 
+  // Graph snapshots for reviewing computations
+  const getGraphSnapshot = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return null;
+
+    const vertices = cy.nodes().map((n) => ({
+      id: parseInt(n.id(), 10),
+      x: n.position('x'),
+      y: n.position('y'),
+    }));
+    const edges = cy.edges().map((e) => ({
+      source: parseInt(e.data('source'), 10),
+      target: parseInt(e.data('target'), 10),
+    }));
+
+    return { vertices, edges };
+  }, []);
+
+  const savedGraphState = useRef(null);
+
+  const viewSnapshot = useCallback((snapshot) => {
+    const cy = cyRef.current;
+    if (!cy || !snapshot) return;
+
+    // Save current graph state
+    savedGraphState.current = {
+      elements: cy.json().elements,
+      nextNodeId: nextNodeId,
+    }
+
+    // Load snapshot
+    deserializeGraph(cy, snapshot);
+    setSnapshotView(snapshot);
+  }, [])
+
+  const exitSnapshotView = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy || !savedGraphState.current) return;
+
+    // Restore saved graph state
+    cy.json({ elements: savedGraphState.current.elements });
+    nextNodeId = savedGraphState.current.nextNodeId;
+    savedGraphState.current = null;
+    setSnapshotView(null);
+  }, []);
+
+  // Hop selection
+
+  const selectHop = useCallback((hop) => {
+    setSelectedHop((prev) => {
+      if (prev && prev.one_line.join(',') === hop.one_line.join(',')) {
+        return null;
+      }
+      return hop;
+    })
+  }, []);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    // Remove any existing overlay arrows
+    cy.elements('.hop-arrow').remove();
+
+    if (!selectedHop) return;
+
+    const perm = selectedHop.one_line
+    const n = perm.length;
+
+    // Track which pairs we've already drawn (for transpositions)
+    const drawn = new Set();
+
+    for (let i = 0; i < n; i++) {
+      const sourceId = String(i);
+      const targetId = String(perm[i]-1); // convert to 0-indexed
+
+      if (sourceId === targetId) continue;
+
+      // Transposition check
+      const pairKey = [Math.min(i, perm[i]-1), Math.max(i, perm[i]-1)].join('.');
+      if (drawn.has(pairKey)) continue;
+      drawn.add(pairKey);
+
+      const isTransposition = perm[perm[i]-1] === i+1;
+
+      cy.add({
+        group: 'edges',
+        data: {
+          id: `hop-arrow-${i}`,
+          source: sourceId,
+          target: targetId
+        },
+        classes: isTransposition ? 'hop-arrow hop-arrow-double' : 'hop-arrow',
+      });
+    }
+  }, [selectedHop])
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const clearSelection = (evt) => {
+      if (evt.target.hasClass && evt.target.hasClass('hop-arrow')) return;
+      setSelectedHop(null);
+    };
+    cy.on('add remove', clearSelection);
+    return () => cy.off('add remove', clearSelection);
+  }, []);
+
+  // Label permutations for performing hops
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    cy.nodes().forEach((node) => {
+      const nodeIndex = parseInt(node.id(),10);
+      if (labelPerm) {
+        node.data('displayLabel', String(labelPerm[nodeIndex]));
+      } else {
+        node.data('displayLabel', node.id());
+      }
+    });
+  }, [labelPerm]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const onGraphChange = (evt) => {
+      if (evt.target.hasClass && evt.target.hasClass('hop-arrow')) return;
+      setLabelPerm(null);
+      setSelectedHop(null);
+    };
+
+    cy.on('add remove', onGraphChange);
+    return () => cy.off('add remove', onGraphChange);
+  }, [])
+
+  const performHop = useCallback((hop) => {
+    const cy = cyRef. current;
+    if (!cy) return;
+
+    const perm = hop.one_line;
+    const n = cy.nodes().length;
+
+    // current label perm
+    const current = labelPerm || Array.from({ length: n }, (_,i) => i);
+
+    const newLabels = new Array(n);
+    for (let i = 0; i<n; i++) {
+      newLabels[perm[i] - 1] = current[i];
+    }
+
+    // Flash animation (hah)
+    cy.nodes().addClass('hide-label');
+    setTimeout(() => {
+      setLabelPerm(newLabels);
+      setTimeout(() => {
+        if (showLabels) {
+          cy.nodes().removeClass('hide-label');
+        }
+      }, 50);
+    }, 150);
+
+    setSelectedHop(null);
+  }, [labelPerm, showLabels]);
+
+  const resetLabels = useCallback(() => {
+    setLabelPerm(null);
+    setSelectedHop(null);
+  }, []);
+
+
+  // Save, Save As, Open, New, Load from Libary
   const handleSave = useCallback(async () => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -387,6 +652,7 @@ function App() {
     setLibraryOpen(false);
     setWorkspace([]);
   }, [isDirty]);
+  
 
   // Keyboard listeners
   useEffect(() => {
@@ -432,7 +698,7 @@ function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleDelete, saveSnapshot, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen, libraryOpen, setLibraryOpen]);
 
-  // Toolbar.
+  // Toolbar helpers
 
   const buttonStyleToolbar = (m) => ({
     padding: '0px 8px',
@@ -493,63 +759,59 @@ function App() {
         </span>
       </div>  
       
-      {/* Toolbar */}
-      <div style={{
-        padding: '8px 12px',
-        display: 'flex',
-        background: 'transparent',
-        gap: '8px',
-        }}>
 
-        {/* Mode buttons */}
-        <button style={buttonStyleToolbar('pan')} onClick={() => { setMode('pan'); setEdgeSource(null); }}>Pan</button>
-        <button style={buttonStyleToolbar('select')} onClick={() => { setMode('select'); setEdgeSource(null); }}>Select</button>
-        <button style={buttonStyleToolbar('addVertex')} onClick={() => setMode('addVertex')}>Vertex</button>
-        <button style={buttonStyleToolbar('addEdge')} onClick={() => setMode('addEdge')}>Edge</button>
-        <button style={buttonStyleToolbar('delete')} onClick={handleDelete}>Delete</button>
 
-        {/* Layout selector */}
+      {/* Hop action bar */}
 
-        <select style={{
-          padding: '8px',
-          borderRadius: '4px',
-          border: '1px solid #ccc' 
-        }}
-          defaultValue=""
-          onChange={(e) => {
-            if (e.target.value && cyRef.current) {
-              cyRef.current.layout({
-                name: e.target.value,
-                animate: true,
-                animationDuration: 500,
-                animationEasing: 'ease-out',
-              }).run();
-              e.target.value = '';
-            }
-          }}
-      >
-        <option value="" disabled>Layout...</option>
-        <option value="circle">Circle</option>
-        <option value="grid">Grid</option>
-        <option value="breadthfirst">Tree</option>
-        <option value="cose">Force-Directed</option>
-        </select>
-
-        <label style={{
+      {(selectedHop || labelPerm) && (
+        <div style={{
+          padding: '6px 12px',
+          background: '#f0f4f8',
+          borderBottom: '1px solid #ddd',
           display: 'flex',
           alignItems: 'center',
-          gap: '4px',
-          fontSize: '14px',
-          cursor: 'pointer'
+          gap: '8px',
+          fontSize: '13px',
         }}>
-          <input
-            type="checkbox"
-            checked={showLabels}
-            onChange={(e) => setShowLabels(e.target.checked)}
-          />
-            Labels
-          </label>  
-      </div>
+          {selectedHop && (
+            <button
+              onClick={() => performHop(selectedHop)}
+              style={{
+                padding: '4px 12px',
+                background: '#4a90d9',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '13px',
+              }}
+            >
+              Perform hop {selectedHop.cycle}
+            </button>
+          )}
+          {labelPerm && (
+            <>
+              <span style={{ color: '#555' }}>
+                Current labels: [{labelPerm.join(', ')}]
+              </span>
+              <button
+                onClick={resetLabels}
+                style={{
+                  padding: '4px 12px',
+                  background: '#95a5a6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                }}
+              >
+                Reset labels
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Main area: canvas + sidebar */}
 
@@ -558,21 +820,140 @@ function App() {
         display: 'flex',
         overflow: 'hidden'
       }}>
-        {/* Graph canvas */}
-        <div ref={containerRef} style={{ flex: 1}} />
+        {/* Canvas column: toolbar + banner + graph */}
+        <div style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
 
+        {/* Toolbar */}
+        <div style={{
+          padding: '8px 12px',
+          display: 'flex',
+          background: 'transparent',
+          gap: '8px',
+          }}>
+
+          {/* Mode buttons */}
+          <button style={buttonStyleToolbar('pan')} onClick={() => { setMode('pan'); setEdgeSource(null); }}>Pan</button>
+          <button style={buttonStyleToolbar('select')} onClick={() => { setMode('select'); setEdgeSource(null); }}>Select</button>
+          <button style={buttonStyleToolbar('addVertex')} onClick={() => setMode('addVertex')}>Vertex</button>
+          <button style={buttonStyleToolbar('addEdge')} onClick={() => setMode('addEdge')}>Edge</button>
+          <button style={buttonStyleToolbar('delete')} onClick={handleDelete}>Delete</button>
+
+          {/* Layout selector */}
+
+          <select style={{
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc' 
+          }}
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value && cyRef.current) {
+                cyRef.current.layout({
+                  name: e.target.value,
+                  animate: true,
+                  animationDuration: 500,
+                  animationEasing: 'ease-out',
+                }).run();
+                e.target.value = '';
+              }
+            }}
+        >
+          <option value="" disabled>Layout...</option>
+          <option value="circle">Circle</option>
+          <option value="grid">Grid</option>
+          <option value="breadthfirst">Tree</option>
+          <option value="cose">Force-Directed</option>
+          </select>
+
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}>
+            <input
+              type="checkbox"
+              checked={showLabels}
+              onChange={(e) => setShowLabels(e.target.checked)}
+            />
+              Labels
+            </label>  
+        </div>
+            {/* Snapshot banner */}
+            {snapshotView && (
+              <div style={{
+                padding: '8px 16px',
+                background: '#fff3cd',
+                borderBottom: '1px solid #ffc107',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '14px',
+                color: '#856404'
+              }}>
+                <span>Viewing a graph from a previous computation</span>
+                <button
+                  onClick={exitSnapshotView}
+                  style={{
+                    padding: '4px 12px',
+                    background: '#ffc107',
+                    color: '#856404',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '13px',
+                  }}
+                >
+                  Back to current graph
+                </button>
+              </div>
+            )}
+
+          {/* Graph canvas */}
+          <div ref={containerRef} style={{
+            flex: 1,
+            minWidth: 0,
+            zIndex: 2
+          }} />
+        </div>
         {/* Sidebar */}
         <div style={{
-          width: '300px',
+          width: `${sidebarWidth}px`,
+          flexShrink: 0,
           borderLeft: '1px solid #ddd',
           display: 'flex',
           flexDirection: 'column',
           background: '#fafafa',
           color: '#000',
-          overflowY: 'hidden',
-      }}>
+          position: 'relative',
+        }}>
+          {/* Drag handle */}
+          <div
+            onMouseDown={onSidebarDragStart}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: '8px',
+              cursor: 'col-resize',
+              zIndex: 10,
+            }}
+          />
+
           {/* Compute buttons */}
-          <ControlPanel getGraphData={getGraphData} addEntry={addWorkspaceEntry} />
+          <ControlPanel
+            getGraphData={getGraphData}
+            getGraphSnapshot={getGraphSnapshot}
+            addEntry={addWorkspaceEntry}
+          />
 
           {/* Notebook header */}
           <div style={{
@@ -628,11 +1009,16 @@ function App() {
                   key={entry.id}
                   entry={entry}
                   onRemove={removeWorkspaceEntry}
+                  onSelectHop={selectHop}
+                  selectedHop={selectedHop}
+                  onViewSnapshot={viewSnapshot}
                 />
               ))
             )}
             </div>
         </div>
+
+        
     </div>
 
     {libraryOpen && (

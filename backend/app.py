@@ -1,14 +1,15 @@
+import http
 import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from fastapi import FastAPI, HTTPException
-from models import GraphInput, LeapGroupResponse
+from models import GraphInput, LeapGroupResponse, HopsResponse, HopData
 
 from sage.all import Graph, PermutationGroup, matrix, ZZ
 
-from leaper.leaper import leap_n
+from leaper.leaper import leap_n, hops
 
 app = FastAPI(
   title="Leaper API",
@@ -50,4 +51,39 @@ def get_leap_group(graph: GraphInput, n: int = 1):
     order=lg.order(),
   )
 
+@app.post("/hops", response_model=HopsResponse)
+def get_hops(graph: GraphInput):
+  G = build_sage_graph(graph)
+  try:
+    h = hops(G)
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
+
+  hop_list =[]
+  for p in h:
+    hop_list.append(HopData(
+      one_line=list(p),
+      cycle=p.cycle_string(),
+    ))
+
+  return HopsResponse(hops=hop_list, count=len(hop_list))
+
+
+@app.post("/hop", response_model=HopsResponse)
+def get_one_hop(graph: GraphInput):
+  G = build_sage_graph(graph)
+  try:
+    h = hops(G)
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
+
+  if len(h) == 0:
+    return HopsResponse(hops = [], count=0)
+
+  first = h[0]
+  hop_data = HopData(
+    one_line = list(first),
+    cycle = first.cycle_string(),
+  )
+  return HopsResponse(hops=[hop_data], count=1)
 

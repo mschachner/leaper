@@ -36,7 +36,7 @@ export function deserializeGraph(cy, data) {
 
     const nodes = data.vertices.map((v) => ({
         group: 'nodes',
-        data: { id: String(v.id) },
+        data: { id: String(v.id), displayLabel: String(v.id) },
         position: { x: v.x, y: v.y },
     }));
 

@@ -8,13 +8,14 @@
  * @returns {object}        - A workspace entry.
  */
 
-export function createEntry(type, params, result, elapsed) {
+export function createEntry(type, params, result, elapsed, graphSnapshot=null) {
     return {
         id: crypto.randomUUID(),
         type,
         params,
         result,
         elapsed,
+        graphSnapshot,
         timestamp: new Date().toISOString(),
     };
 }

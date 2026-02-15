@@ -8,3 +8,11 @@ class GraphInput(BaseModel):
 class LeapGroupResponse(BaseModel):
   structure: str
   order: int
+
+class HopData(BaseModel):
+  one_line: list[int]
+  cycle: str
+
+class HopsResponse(BaseModel):
+  hops: list[HopData]
+  count: int
