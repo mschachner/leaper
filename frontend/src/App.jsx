@@ -2,10 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import cytoscape from 'cytoscape';
 import { serializeGraph, deserializeGraph, validateGraphData } from './graphFile';
 import { saveAs, save, openFile, clearFileHandle } from './fileAccess';
+import { toCycleNotation } from './permUtils';
+import { createEntry } from './workspace';
 
 import ControlPanel from './ControlPanel';
 import GraphLibraryModal from './graphLibraryModal';
 import NotebookEntry from './NotebookEntry';
+import WorkingLeap from './WorkingLeap';
+import DrawHopBar from './DrawHopBar';
+import HopPalette from './HopPalette';
 
 
 let nextNodeId = 0;
@@ -16,19 +21,173 @@ function App() {
   const containerRef = useRef(null); // reference to the HTML div
   const isDraggingSidebar = useRef(false);
 
-  const [mode, setMode] = useState('select');
-  const [edgeSource, setEdgeSource] = useState(null);
-  const [fileName, setFileName] = useState(null);
-  const [isDirty, setIsDirty] = useState(false);
-  const [libraryOpen, setLibraryOpen] = useState(false);
-  const [showLabels, setShowLabels] = useState(true);
-  const [workspace, setWorkspace] = useState([]);
+  const [mode, setMode]                 = useState('select');
+  const [edgeSource, setEdgeSource]     = useState(null);
+  const [fileName, setFileName]         = useState(null);
+  const [isDirty, setIsDirty]           = useState(false);
+  const [libraryOpen, setLibraryOpen]   = useState(false);
+  const [showLabels, setShowLabels]     = useState(true);
+  const [workspace, setWorkspace]       = useState([]);
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [snapshotView, setSnapshotView] = useState(null);
-  const [selectedHop, setSelectedHop] = useState(null);
-  const [labelPerm, setLabelPerm] = useState(null);
+  const [selectedHop, setSelectedHop]   = useState(null);
+  const [labelPerm, setLabelPerm]       = useState(null);
+  const [hopHistory, setHopHistory]     = useState([]);
+  const [savedLeaps, setSavedLeaps]     = useState([]);
+  const [drawingHop, setDrawingHop]     = useState(null);
+  const [hopPalette, setHopPalette]     = useState([]);
 
+  // Cytoscape initialization
+  useEffect(() => {
+    const cy = cytoscape({
+      container: containerRef.current,
+      elements: [],
+      style: [
+        {
+          selector: 'node',
+          style: {
+            'label': 'data(displayLabel)',
+            'text-valign': 'center',
+            'background-color': '#4a90d9',
+            'color': '#fff',
+            'text-outline-color': '#4a90d9',
+            'text-outline-width': 2,
+            'width': 30,
+            'height': 30,
+          },
+        },
+        {
+          selector: 'node:selected',
+          style: {
+            'background-color': '#e74c3c',
+            'text-outline-color': '#e74c3c',
+          },
+        },
+        {
+          selector: 'node.edge-source',
+          style: {
+            'background-color': '#f39c12',
+            'text-outline-color': '#f39c12',
+          },
+        },
+        {
+          selector: 'node.hide-label',
+          style: {
+            'label': '',
+            'text-outline-width': 0,
+          },
+        },
+        {
+          selector: 'edge',
+          style: {
+            'width': 2,
+            'line-color': '#999',
+            'curve-style': 'bezier',
+          }
+        },
+        {
+          selector: 'edge:selected',
+          style: {
+            'line-color': '#e74c3c',
+            'width': 3,
+          },
+        },
+        {
+          selector: '.hop-arrow',
+          style: {
+            'width': 2.5,
+            'line-color': '#e74c3c',
+            'target-arrow-color': '#e74c3c',
+            'target-arrow-shape': 'triangle',
+            'arrow-scale': 1.2,
+            'curve-style': 'bezier',
+            'control-point-step-size': 40,
+            'line-style': 'dashed',
+            'line-dash-pattern': [6,3],
+            'opacity': 0.85,
+          },
+        },
+        {
+          selector: '.hop-arrow-double',
+          style: {
+            'source-arrow-color': '#e74c3c',
+            'source-arrow-shape': 'triangle',
+          },
+        },
+        {
+          selector: '.draw-hop-arrow',
+          style: {
+            'width': 2.5,
+            'line-color': '#27ae60',
+            'target-arrow-color': '#27ae60',
+            'target-arrow-shape': 'triangle',
+            'arrow-scale': 1.2,
+            'curve-style': 'bezier',
+            'control-point-step-size': 40,
+            'line-style':  'dashed',
+            'line-dash-pattern': [6,3],
+            'opacity': 0.85,
+          },
+        },
+        {
+          selector: '.draw-hop-arrow-double',
+          style: {
+            'source-arrow-color': '#27ae60',
+            'source-arrow-shape': 'triangle',
+          },
+        },
+        {
+          selector: 'node.draw-hop-source',
+          style: {
+            'background-color': '#27ae60',
+            'text-outline-color': '#27ae60',
+          },
+        },
+        {
+          selector: '.leap-arrow',
+          style: {
+            'width': 2.5,
+            'line-color': '#2980b9',
+            'target-arrow-color': '#2980b9',
+            'target-arrow-shape': 'triangle',
+            'arrow-scale': 1.2,
+            'curve-style': 'bezier',
+            'control-point-step-size': 40,
+            'line-style': 'dashed',
+            'line-dash-pattern': [6,3],
+            'opacity': 0.7,
+          },
+        },
+        {
+          selector: '.leap-arrow-double',
+          style: {
+            'source-arrow-color': '#2980b9',
+            'source-arrow-shape': 'triangle',
+          },
+        },
+      ],
+      layout: { name: 'preset' },
+      userZoomingEnabled: true,
+      wheelSensitivity: 0.3,
+    });
 
+    cyRef.current = cy;
+    return () => cy.destroy()
+  }, []);
+
+  // Graph data handler
+  const getGraphData = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return [];
+
+    const vertices = cy.nodes().map((n) => parseInt(n.id(), 10));
+    const edges = cy.edges().map((e) => [
+      parseInt(e.data('source'), 10),
+      parseInt(e.data('target'), 10),
+    ]);
+
+    return { vertices, edges };
+  }, []);
 
   // Undo/redo helpers
   const undoStack = useRef([]);
@@ -147,94 +306,6 @@ function App() {
     };
   }, []);
 
-
-  // Cytoscape initialization
-  useEffect(() => {
-    const cy = cytoscape({
-      container: containerRef.current,
-      elements: [],
-      style: [
-        {
-          selector: 'node',
-          style: {
-            'label': 'data(displayLabel)',
-            'text-valign': 'center',
-            'background-color': '#4a90d9',
-            'color': '#fff',
-            'text-outline-color': '#4a90d9',
-            'text-outline-width': 2,
-            'width': 30,
-            'height': 30,
-          },
-        },
-        {
-          selector: 'node:selected',
-          style: {
-            'background-color': '#e74c3c',
-            'text-outline-color': '#e74c3c',
-          },
-        },
-        {
-          selector: 'node.edge-source',
-          style: {
-            'background-color': '#f39c12',
-            'text-outline-color': '#f39c12',
-          },
-        },
-        {
-          selector: 'node.hide-label',
-          style: {
-            'label': '',
-            'text-outline-width': 0,
-          },
-        },
-        {
-          selector: 'edge',
-          style: {
-            'width': 2,
-            'line-color': '#999',
-            'curve-style': 'bezier',
-          }
-        },
-        {
-          selector: 'edge:selected',
-          style: {
-            'line-color': '#e74c3c',
-            'width': 3,
-          },
-        },
-        {
-          selector: '.hop-arrow',
-          style: {
-            'width': 2.5,
-            'line-color': '#e74c3c',
-            'target-arrow-color': '#e74c3c',
-            'target-arrow-shape': 'triangle',
-            'arrow-scale': 1.2,
-            'curve-style': 'bezier',
-            'control-point-step-size': 40,
-            'line-style': 'dashed',
-            'line-dash-pattern': [6,3],
-            'opacity': 0.85,
-          },
-        },
-        {
-          selector: '.hop-arrow-double',
-          style: {
-            'source-arrow-color': '#e74c3c',
-            'source-arrow-shape': 'triangle',
-          },
-        },
-      ],
-      layout: { name: 'preset' },
-      userZoomingEnabled: true,
-      wheelSensitivity: 0.3,
-    });
-
-    cyRef.current = cy;
-    return () => cy.destroy()
-  }, []);
-
   // Tracking dirty state
   useEffect(() => {
     const cy = cyRef.current;
@@ -339,6 +410,12 @@ function App() {
     const cy = cyRef.current;
     if (!cy) return;
 
+    if (mode !== 'drawHop') {
+      setDrawingHop(null);
+      // Remove any in-progress drawing arrows
+      cy.elements('.draw-hop-arrow').remove();
+    }
+
     if (mode === 'addVertex') {
       if (evt.target === cy) {
         const pos = evt.position;
@@ -374,6 +451,27 @@ function App() {
           setEdgeSource(null);
         }
       }
+    } else if (mode === 'drawHop') {
+      if (evt.target !== cy && evt.target.isNode()) {
+        const clickedId = parseInt(evt.target.id(), 10);
+
+        // Pure state update — Cytoscape visuals are handled by the
+        // drawingHop sync effect below.
+        setDrawingHop((prev) => {
+          if (!prev) return prev;
+
+          if (prev.pendingSource === null) {
+            if (clickedId in prev.assignments) return prev;
+            return { ...prev, pendingSource: clickedId };
+          } else {
+            const source = prev.pendingSource;
+            const usedTargets = new Set(Object.values(prev.assignments));
+            if (usedTargets.has(clickedId)) return prev;
+            const newAssignments = { ...prev.assignments, [source]: clickedId };
+            return { ...prev, assignments: newAssignments, pendingSource: null };
+          }
+        });
+      }
     }
   }, [mode, edgeSource]);
 
@@ -384,6 +482,53 @@ function App() {
     cy.on('tap', handleTap);
     return () => cy.off('tap', handleTap);
   }, [handleTap]);
+
+  // Sync draw-hop arrows + source highlight with drawingHop state.
+  // This replaces all inline Cytoscape mutations — the tap handler
+  // only updates state, and this effect makes Cytoscape match.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    // Clear everything first
+    cy.elements('.draw-hop-arrow').remove();
+    cy.nodes().removeClass('draw-hop-source');
+
+    if (!drawingHop) return;
+
+    // Highlight the pending source vertex (first click waiting for target)
+    if (drawingHop.pendingSource !== null) {
+      cy.getElementById(String(drawingHop.pendingSource)).addClass('draw-hop-source');
+    }
+
+    // Draw arrows for all completed assignments
+    const assignments = drawingHop.assignments;
+    const drawn = new Set();
+
+    for (const [sourceStr, target] of Object.entries(assignments)) {
+      const source = Number(sourceStr);
+      if (source === target) continue; // skip fixed points — no arrow needed
+
+      const pairKey = [Math.min(source, target), Math.max(source, target)].join('.');
+      if (drawn.has(pairKey)) continue;
+      drawn.add(pairKey);
+
+      const isTransposition =
+        String(target) in assignments && assignments[String(target)] === source;
+
+      cy.add({
+        group: 'edges',
+        data: {
+          id: `draw-hop-${source}`,
+          source: String(source),
+          target: String(target),
+        },
+        classes: isTransposition
+          ? 'draw-hop-arrow draw-hop-arrow-double'
+          : 'draw-hop-arrow',
+      });
+    }
+  }, [drawingHop]);
 
   const handleDelete = useCallback(() => {
     const cy = cyRef.current;
@@ -442,12 +587,7 @@ function App() {
   // Hop selection
 
   const selectHop = useCallback((hop) => {
-    setSelectedHop((prev) => {
-      if (prev && prev.one_line.join(',') === hop.one_line.join(',')) {
-        return null;
-      }
-      return hop;
-    })
+    setSelectedHop(hop);
   }, []);
 
   useEffect(() => {
@@ -495,7 +635,9 @@ function App() {
     if (!cy) return;
 
     const clearSelection = (evt) => {
-      if (evt.target.hasClass && evt.target.hasClass('hop-arrow')) return;
+      if (evt.target.hasClass && (
+        evt.target.hasClass('hop-arrow') || evt.target.hasClass('draw-hop-arrow') || evt.target.hasClass('leap-arrow')
+      )) return;
       setSelectedHop(null);
     };
     cy.on('add remove', clearSelection);
@@ -516,6 +658,37 @@ function App() {
         node.data('displayLabel', node.id());
       }
     });
+
+    // Draw blue leap arrows showing the working leap permutation
+    cy.elements('.leap-arrow').remove();
+
+    if (labelPerm) {
+      const n = labelPerm.length;
+      const drawn = new Set();
+
+      for (let i = 0; i < n; i++) {
+        const target = labelPerm[i];
+        if (target === i) continue;
+
+        const pairKey = [Math.min(i, target), Math.max(i, target)].join('.');
+        if (drawn.has(pairKey)) continue;
+        drawn.add(pairKey);
+
+        const isTransposition = labelPerm[target] === i;
+
+        cy.add({
+          group: 'edges',
+          data: {
+            id: `leap-arrow-${i}`,
+            source: String(i),
+            target: String(target),
+          },
+          classes: isTransposition
+            ? 'leap-arrow leap-arrow-double'
+            : 'leap-arrow',
+        });
+      }
+    }
   }, [labelPerm]);
 
   useEffect(() => {
@@ -523,9 +696,12 @@ function App() {
     if (!cy) return;
 
     const onGraphChange = (evt) => {
-      if (evt.target.hasClass && evt.target.hasClass('hop-arrow')) return;
+      if (evt.target.hasClass && (
+        evt.target.hasClass('hop-arrow') || evt.target.hasClass('draw-hop-arrow') || evt.target.hasClass('leap-arrow')
+      )) return;
       setLabelPerm(null);
       setSelectedHop(null);
+      setHopHistory([]);
     };
 
     cy.on('add remove', onGraphChange);
@@ -542,10 +718,17 @@ function App() {
     // current label perm
     const current = labelPerm || Array.from({ length: n }, (_,i) => i);
 
+
     const newLabels = new Array(n);
     for (let i = 0; i<n; i++) {
       newLabels[perm[i] - 1] = current[i];
     }
+
+    // Record this hop in the composition history
+    setHopHistory((prev) => [...prev, {
+      cycle: hop.cycle,
+      one_line: hop.one_line
+    }]);
 
     // Flash animation (hah)
     cy.nodes().addClass('hide-label');
@@ -564,31 +747,170 @@ function App() {
   const resetLabels = useCallback(() => {
     setLabelPerm(null);
     setSelectedHop(null);
+    setHopHistory([]);
   }, []);
 
+  // Working leap handlers
+
+  const saveWorkingLeap = useCallback(() => {
+    if (!labelPerm) return;
+
+    const name = window.prompt('Name for this leap:')
+    if (!name) return;
+
+    setSavedLeaps((prev) => [...prev, {
+      name,
+      permutation: [...labelPerm],
+      history: hopHistory.map((h) => h.cycle),
+    }]);
+    setIsDirty(true);
+  }, [labelPerm, hopHistory]);
+
+  const recallWorkingLeap = useCallback((saved) => {
+    setLabelPerm([...saved.permutation]);
+    setHopHistory(saved.history.map((cycle) => ({ cycle, one_line: []})));
+    setSelectedHop(null);
+  }, []);
+
+  const deleteSavedLeap = useCallback((index) => {
+    setSavedLeaps((prev) => prev.filter((_, i) => i !== index));
+    setIsDirty(true);
+  }, []);
+
+  // Drawing hop handlers
+
+  const handleUndoDrawAssignment = useCallback(() => {
+    setDrawingHop((prev) => {
+      if (!prev) return prev;
+      const entries = Object.entries(prev.assignments);
+      if (entries.length === 0) return prev;
+
+      const newAssignments = { ...prev.assignments };
+      delete newAssignments[entries[entries.length - 1][0]];
+      return { ...prev, assignments: newAssignments, pendingSource: null };
+    });
+  }, []);
+
+  // Hop palette helpers
+
+  const addToPalette = useCallback((hop, source = 'computed') => {
+    setHopPalette((prev) => {
+      const exists = prev.some((h) => h.one_line.join(',') === hop.one_line.join(','));
+      if (exists) return prev;
+      const name = hop.name || hop.cycle;
+      return [...prev, { name, one_line: hop.one_line, cycle: hop.cycle, source }];
+    });
+    setIsDirty(true);
+  }, []);
+
+  const removeFromPalette = useCallback((index) => {
+    setHopPalette((prev) => prev.filter((_, i) => i !== index));
+    setIsDirty(true);
+  }, []);
+
+  const handleVerifyHop = useCallback(async () => {
+    const cy = cyRef.current;
+    if (!cy || !drawingHop) return;
+
+    const n = cy.nodes().length;
+    const assignments = drawingHop.assignments;
+
+    const oneLine = [];
+    for (let i=0; i<n; i++) {
+      oneLine.push(assignments[i]+1);
+    }
+
+    const graphData = getGraphData();
+
+    try {
+      const resp = await fetch('http://localhost:8000/verify-hop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vertices: graphData.vertices,
+          edges: graphData.edges,
+          one_line: oneLine,
+        }),
+      });
+
+      const data = await resp.json();
+
+      if (data.valid) {
+        const zeroIndexed = [];
+        for (let i=0; i<n; i++) {
+          zeroIndexed.push(assignments[i]);
+        }
+        const cycle = toCycleNotation(zeroIndexed);
+
+        alert(`Valid hop: ${cycle}`);
+
+        const entry = createEntry('hop', { source: 'manual' }, {
+          hops: [{ one_line: oneLine, cycle }],
+          count: 1,
+        }, null, getGraphSnapshot());
+        addWorkspaceEntry(entry);
+
+        // Also pin to palette
+        addToPalette({ one_line: oneLine, cycle }, 'manual');
+
+        // Reset drawing state (effect handles arrow cleanup)
+        setDrawingHop({ assignments: {}, pendingSource: null });
+      } else {
+        alert('This permutation is not a valid hop on this graph.');
+      }
+    } catch (err) {
+      alert(`Error verifying hop: ${err.message}`);
+    }
+  }, [drawingHop, getGraphData, getGraphSnapshot, addWorkspaceEntry, addToPalette]);
+
+  const handlePerformDrawnHop = useCallback(() => {
+    if (!drawingHop) return;
+
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const n = cy.nodes().length;
+    const assignments = drawingHop.assignments;
+
+    const oneLine = []
+    for (let i = 0; i < n; i++) {
+      oneLine.push(assignments[i]+1);
+    }
+
+    const zeroIndexed = []
+    for (let i = 0; i<n; i++) {
+      zeroIndexed.push(assignments[i]);
+    }
+    const cycle = toCycleNotation(zeroIndexed);
+
+    performHop({ one_line: oneLine, cycle});
+
+    // Reset drawing state (effect handles arrow cleanup)
+    setDrawingHop({ assignments: {}, pendingSource: null });
+  }, [drawingHop, performHop]);
 
   // Save, Save As, Open, New, Load from Libary
   const handleSave = useCallback(async () => {
     const cy = cyRef.current;
     if (!cy) return;
 
-    const graphData = serializeGraph(cy, fileName || 'Untitled', { showLabels }, workspace);
+    const graphData = serializeGraph(cy, fileName || 'Untitled', { showLabels }, workspace, savedLeaps, hopPalette);
     const json = JSON.stringify(graphData, null, 2);
     const name = await save(json);
     setFileName(name);
     setIsDirty(false);
-  }, [fileName, showLabels, workspace])
+  }, [fileName, showLabels, workspace, savedLeaps, hopPalette])
 
   const handleSaveAs = useCallback(async () => {
     const cy = cyRef.current;
     if (!cy) return;
 
-    const graphData = serializeGraph(cy, fileName || 'Untitled', { showLabels }, workspace);
+    const graphData = serializeGraph(cy, fileName || 'Untitled', { showLabels }, workspace, savedLeaps, hopPalette);
     const json = JSON.stringify(graphData, null, 2);
     const name = await saveAs(json);
     setFileName(name);
     setIsDirty(false);
-  }, [fileName, showLabels, workspace])
+  }, [fileName, showLabels, workspace, savedLeaps, hopPalette])
 
   const handleOpen = useCallback(async () => {
     const confirmMsg = 'You have unsaved changes. Open a different graph anyway?';
@@ -611,6 +933,8 @@ function App() {
       setShowLabels(data.settings.showLabels);
     }
     setWorkspace(data.workspace || []);
+    setSavedLeaps(data.savedLeaps || []);
+    setHopPalette(data.hopPalette || []);
     const maxId = Math.max(-1, ...data.vertices.map((v) => v.id));
     nextNodeId = maxId + 1;
 
@@ -631,6 +955,8 @@ function App() {
     setFileName(null);
     setIsDirty(false);
     setWorkspace([]);
+    setSavedLeaps([]);
+    setHopPalette([]);
     nextNodeId = 0;
   }, [isDirty]);
 
@@ -651,8 +977,10 @@ function App() {
     setIsDirty(false);
     setLibraryOpen(false);
     setWorkspace([]);
+    setSavedLeaps([]);
+    setHopPalette([]);
   }, [isDirty]);
-  
+
 
   // Keyboard listeners
   useEffect(() => {
@@ -718,19 +1046,6 @@ function App() {
     cursor: 'pointer',
   }
 
-  const getGraphData = useCallback(() => {
-    const cy = cyRef.current;
-    if (!cy) return [];
-
-    const vertices = cy.nodes().map((n) => parseInt(n.id(), 10));
-    const edges = cy.edges().map((e) => [
-      parseInt(e.data('source'), 10),
-      parseInt(e.data('target'), 10),
-    ]);
-
-    return { vertices, edges };
-  }, []);
-
   return (
     <div style={{
       width: '100vw',
@@ -761,56 +1076,18 @@ function App() {
       
 
 
-      {/* Hop action bar */}
-
-      {(selectedHop || labelPerm) && (
-        <div style={{
-          padding: '6px 12px',
-          background: '#f0f4f8',
-          borderBottom: '1px solid #ddd',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '13px',
-        }}>
-          {selectedHop && (
-            <button
-              onClick={() => performHop(selectedHop)}
-              style={{
-                padding: '4px 12px',
-                background: '#4a90d9',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '13px',
-              }}
-            >
-              Perform hop {selectedHop.cycle}
-            </button>
-          )}
-          {labelPerm && (
-            <>
-              <span style={{ color: '#555' }}>
-                Current labels: [{labelPerm.join(', ')}]
-              </span>
-              <button
-                onClick={resetLabels}
-                style={{
-                  padding: '4px 12px',
-                  background: '#95a5a6',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                }}
-              >
-                Reset labels
-              </button>
-            </>
-          )}
-        </div>
+      {/* Draw hop status bar */}
+      {mode === 'drawHop' && drawingHop && (
+        <DrawHopBar
+          drawingHop={drawingHop}
+          nodeCount={cyRef.current ? cyRef.current.nodes().length : 0}
+          onVerifyAndSave={handleVerifyHop}
+          onPerform={handlePerformDrawnHop}
+          onCancel={() => {
+            setMode('select');
+          }}
+          onUndo={handleUndoDrawAssignment}
+        />
       )}
 
       {/* Main area: canvas + sidebar */}
@@ -842,6 +1119,15 @@ function App() {
           <button style={buttonStyleToolbar('addVertex')} onClick={() => setMode('addVertex')}>Vertex</button>
           <button style={buttonStyleToolbar('addEdge')} onClick={() => setMode('addEdge')}>Edge</button>
           <button style={buttonStyleToolbar('delete')} onClick={handleDelete}>Delete</button>
+          <button style={buttonStyleToolbar('drawHop')} onClick={() => {
+            setMode('drawHop');
+            setEdgeSource(null);
+            setDrawingHop({ assignments: {}, pendingSource: null });
+            setSelectedHop(null);
+          }}
+          >
+            Draw hop
+          </button>
 
           {/* Layout selector */}
 
@@ -948,6 +1234,27 @@ function App() {
             }}
           />
 
+          {/* Working leap display */}
+          <WorkingLeap
+            labelPerm={labelPerm}
+            hopHistory={hopHistory}
+            onReset={resetLabels}
+            onSave={saveWorkingLeap}
+            savedLeaps={savedLeaps}
+            onRecall={recallWorkingLeap}
+            onDelete={deleteSavedLeap}
+          />
+
+          {/* Hop palette */}
+          <HopPalette
+            hops={hopPalette}
+            onHover={selectHop}
+            onUnhover={() => setSelectedHop(null)}
+            selectedHop={selectedHop}
+            onRemove={removeFromPalette}
+            onPerform={performHop}
+          />
+
           {/* Compute buttons */}
           <ControlPanel
             getGraphData={getGraphData}
@@ -1009,9 +1316,12 @@ function App() {
                   key={entry.id}
                   entry={entry}
                   onRemove={removeWorkspaceEntry}
-                  onSelectHop={selectHop}
+                  onHoverHop={selectHop}
+                  onUnhoverHop={() => setSelectedHop(null)}
                   selectedHop={selectedHop}
+                  onPerformHop={performHop}
                   onViewSnapshot={viewSnapshot}
+                  onPinHop={addToPalette}
                 />
               ))
             )}

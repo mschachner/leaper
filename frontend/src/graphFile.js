@@ -2,7 +2,14 @@
  * Read the current graph into .leap format.
  */
 
-export function serializeGraph(cy, name= 'Untitled', settings = {}, workspace = []) {
+export function serializeGraph(
+    cy,
+    name= 'Untitled',
+    settings = {},
+    workspace = [],
+    savedLeaps = [],
+    hopPalette = []
+) {
     const vertices = cy.nodes().map((node) => ({
         id: parseInt(node.id(), 10),
         x: node.position('x'),
@@ -20,9 +27,11 @@ export function serializeGraph(cy, name= 'Untitled', settings = {}, workspace = 
         edges,
         settings,
         workspace,
+        savedLeaps,
+        hopPalette,
         metadata: {
             created: new Date().toISOString(),
-            version: '1.1',
+            version: '1.2',
         },
     };
 }

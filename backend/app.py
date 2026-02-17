@@ -5,11 +5,11 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from fastapi import FastAPI, HTTPException
-from models import GraphInput, LeapGroupResponse, HopsResponse, HopData
+from models import GraphInput, LeapGroupResponse, HopsResponse, HopData, VerifyHopRequest
 
 from sage.all import Graph, PermutationGroup, matrix, ZZ
 
-from leaper.leaper import leap_n, hops
+from leaper.leaper import leap_n, hops, is_hop
 
 app = FastAPI(
   title="Leaper API",
@@ -87,3 +87,16 @@ def get_one_hop(graph: GraphInput):
   )
   return HopsResponse(hops=[hop_data], count=1)
 
+@app.post("/verify-hop")
+def verify_hop(req: VerifyHopRequest):
+  n = len(req.vertices)
+  m = matrix(ZZ, n, n)
+  for u, v in req.edges:
+    m[u, v] = 1
+    m[v, u] = 1
+  G = Graph(m, format='adjacency_matrix')
+  # G has 0-indexed vertices. Convert 1-indexed one-line to 0-indexed list
+  # so is_hop can use p[v] with list indexing.
+  perm_0 = [x - 1 for x in req.one_line]
+  valid = is_hop(G, perm_0)
+  return { "valid": valid }

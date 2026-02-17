@@ -16,3 +16,8 @@ class HopData(BaseModel):
 class HopsResponse(BaseModel):
   hops: list[HopData]
   count: int
+
+class VerifyHopRequest(BaseModel):
+  vertices: list[int]
+  edges: list[tuple[int,int]]
+  one_line: list[int]
