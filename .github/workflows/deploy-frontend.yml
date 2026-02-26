@@ -1,0 +1,48 @@
+name: Deploy frontend to site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # allows manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout leaper repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Checkout site repo
+        uses: actions/checkout@v4
+        with:
+          repository: mschachner/site
+          token: ${{ secrets.SITE_DEPLOY_TOKEN }}
+          path: site
+
+      - name: Copy build to site
+        run: |
+          rm -rf site/leaper
+          cp -r frontend/dist site/leaper
+
+      - name: Push to site repo
+        working-directory: site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add leaper
+          git diff --staged --quiet && echo "No changes to deploy" && exit 0
+          git commit -m "Deploy Leaper frontend"
+          git push
