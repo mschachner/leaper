@@ -2,8 +2,8 @@
 
 ```
 🐸 - 🐸 - 🐸 - 🐸 - 🐸      There are 25 frogs on 25 lilypads, spaced out in a grid like so.
-|    |    |   |    |      On the count of three, every frog hops to an orthogonally adjacent lilypad.
-🐸 - 🐸 - 🐸 - 🐸 - 🐸      Every frog has to hop; nobody gets to stay still.
+|    |    |   |    |      On the count of three, every frog hops to an orthogonally adjacent
+🐸 - 🐸 - 🐸 - 🐸 - 🐸      lilypad. Every frog has to hop; nobody gets to stay still.
 |    |    |   |    |
 🐸 - 🐸 - 🐸 - 🐸 - 🐸      One, two, three... hop!
 |    |    |   |    |       ...can they do it?
