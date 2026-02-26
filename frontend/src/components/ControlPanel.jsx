@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createEntry } from './workspace';
+import { createEntry } from '../lib/workspace';
 
 function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
     const [loading, setLoading] = useState(false);

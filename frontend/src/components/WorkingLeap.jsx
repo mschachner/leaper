@@ -1,4 +1,4 @@
-import { toCycleNotation } from "./permUtils";
+import { toCycleNotation, shiftCycleNotation } from "../lib/permUtils";
 
 /**
  * Displays the current working leap; the composed permutation in cycle notation, the number of hops composed, and the composition history.
@@ -13,9 +13,10 @@ function WorkingLeap({
     savedLeaps,
     onRecall,
     onDelete,
+    indexBase = 1,
 }) {
     // Convert to cycle notation
-    const cycleStr = labelPerm ? toCycleNotation(labelPerm) : '()';
+    const cycleStr = labelPerm ? toCycleNotation(labelPerm, indexBase) : '()';
     const hopCount = hopHistory.length;
 
     return (
@@ -103,7 +104,7 @@ function WorkingLeap({
                             marginLeft: '6px',
                             fontFamily: 'monospace'
                         }}>
-                            {hopHistory.map((h) => h.cycle).join(' ∘ ')}
+                            {hopHistory.map((h) => indexBase === 0 ? shiftCycleNotation(h.cycle, -1) : h.cycle).join(' ∘ ')}
                         </span>
                     )}
                 </div>
@@ -153,7 +154,7 @@ function WorkingLeap({
                                     flex: 1,
                                 }}
                                 title={
-                                    `Recall: ${toCycleNotation(saved.permutation)}`
+                                    `Recall: ${toCycleNotation(saved.permutation, indexBase)}`
                                 }
                             >
                                 {saved.name}
@@ -164,7 +165,7 @@ function WorkingLeap({
                                 fontSize: '11px',
                                 marginRight: '8px',
                             }}>
-                                {toCycleNotation(saved.permutation)}
+                                {toCycleNotation(saved.permutation, indexBase)}
                             </span>
                             <button
                                 onClick={() => onDelete(i)}

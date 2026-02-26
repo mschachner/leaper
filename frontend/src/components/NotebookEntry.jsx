@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { shiftCycleNotation } from '../lib/permUtils';
 
-function NotebookEntry({ entry, onRemove, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onViewSnapshot, onPinHop }) {
+function NotebookEntry({ entry, onRemove, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onViewSnapshot, onPinHop, indexBase = 1 }) {
     return (
         <div style={{
             padding: '10px 14px',
@@ -41,6 +42,7 @@ function NotebookEntry({ entry, onRemove, onHoverHop, onUnhoverHop, selectedHop,
                 selectedHop={selectedHop}
                 onPerformHop={onPerformHop}
                 onPinHop={onPinHop}
+                indexBase={indexBase}
             />
         </div>
     );
@@ -111,7 +113,7 @@ function EntryHeader({ entry, onViewSnapshot }) {
     );
 }
 
-function EntryBody({ entry, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onPinHop }) {
+function EntryBody({ entry, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onPinHop, indexBase }) {
     switch (entry.type) {
         case 'leap-group':
             return <LeapGroupBody result={entry.result} />;
@@ -124,6 +126,7 @@ function EntryBody({ entry, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
                         selectedHop={selectedHop}
                         onPerformHop={onPerformHop}
                         onPinHop={onPinHop}
+                        indexBase={indexBase}
             />;
         default:
             return <div style={{
@@ -162,7 +165,7 @@ function LeapGroupBody({ result }) {
     );
 }
 
-function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onPinHop }) {
+function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onPinHop, indexBase }) {
     const [expanded, setExpanded] = useState(false);
     const PREVIEW_COUNT = 5;
 
@@ -204,6 +207,7 @@ function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
                     onUnhover={onUnhoverHop}
                     onPerform={onPerformHop ? () => onPerformHop(hop) : null}
                     onPin={onPinHop ? () => onPinHop(hop) : null}
+                    indexBase={indexBase}
                 />
             ))}
             {hasMore && (
@@ -229,7 +233,13 @@ function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
     );
 }
 
-function HopItem({ hop, selected, onHover, onUnhover, onPerform, onPin }) {
+function HopItem({ hop, selected, onHover, onUnhover, onPerform, onPin, indexBase = 1 }) {
+    // Backend cycles/one_line are always 1-indexed; shift for 0-indexed display
+    const displayCycle = indexBase === 0 ? shiftCycleNotation(hop.cycle, -1) : hop.cycle;
+    const displayOneLine = indexBase === 0
+        ? hop.one_line.map((v) => v - 1)
+        : hop.one_line;
+
     return (
         <div
             onMouseEnter={() => onHover()}
@@ -246,9 +256,9 @@ function HopItem({ hop, selected, onHover, onUnhover, onPerform, onPin }) {
                 cursor: 'default',
                 transition: 'border-color 0.15s, background 0.15s',
             }}
-            title={`One-line: [${hop.one_line.join(', ')}]`}
+            title={`One-line: [${displayOneLine.join(', ')}]`}
         >
-            <span style={{ flex: 1 }}>{hop.cycle}</span>
+            <span style={{ flex: 1 }}>{displayCycle}</span>
             {onPerform && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onPerform(); }}

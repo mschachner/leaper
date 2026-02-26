@@ -40,21 +40,22 @@ export function serializeGraph(
  * Load a .leap file into Cytoscape.
  */
 
-export function deserializeGraph(cy, data) {
+export function deserializeGraph(cy, data, indexBase = 1, directed = false) {
     cy.elements().remove();
 
     const nodes = data.vertices.map((v) => ({
         group: 'nodes',
-        data: { id: String(v.id), displayLabel: String(v.id) },
+        data: { id: String(v.id), displayLabel: String(v.id + indexBase) },
         position: { x: v.x, y: v.y },
     }));
 
     const edges = data.edges.map((e) => ({
         group: 'edges',
-        data: { 
+        data: {
             source: String(e.source),
             target: String(e.target)
-        }
+        },
+        classes: directed ? 'directed' : '',
     }));
 
     cy.add([...nodes, ...edges]);

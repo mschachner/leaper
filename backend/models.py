@@ -3,7 +3,7 @@ from pydantic import BaseModel
 class GraphInput(BaseModel):
   vertices: list[int]
   edges: list[tuple[int,int]]
-  # directed: bool = False
+  directed: bool = False
 
 class LeapGroupResponse(BaseModel):
   structure: str
@@ -21,3 +21,4 @@ class VerifyHopRequest(BaseModel):
   vertices: list[int]
   edges: list[tuple[int,int]]
   one_line: list[int]
+  directed: bool = False

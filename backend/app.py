@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from fastapi import FastAPI, HTTPException
 from models import GraphInput, LeapGroupResponse, HopsResponse, HopData, VerifyHopRequest
 
-from sage.all import Graph, PermutationGroup, matrix, ZZ
+from sage.all import Graph, DiGraph, PermutationGroup, matrix, ZZ
 
 from leaper.leaper import leap_n, hops, is_hop
 
@@ -26,11 +26,17 @@ app.add_middleware(
 )
 
 def build_sage_graph(data: GraphInput):
-  m = matrix(ZZ, len(data.vertices), len(data.vertices))
-  for u, v in data.edges:
-    m[u-1, v-1] = 1
-    m[v-1, u-1] = 1
-  return Graph(m, format='adjacency_matrix')
+  n = len(data.vertices)
+  m = matrix(ZZ, n, n)
+  if data.directed:
+    for u, v in data.edges:
+      m[u, v] = 1
+    return DiGraph(m, format='adjacency_matrix')
+  else:
+    for u, v in data.edges:
+      m[u, v] = 1
+      m[v, u] = 1
+    return Graph(m, format='adjacency_matrix')
 
 # Endpoints
 
@@ -91,10 +97,15 @@ def get_one_hop(graph: GraphInput):
 def verify_hop(req: VerifyHopRequest):
   n = len(req.vertices)
   m = matrix(ZZ, n, n)
-  for u, v in req.edges:
-    m[u, v] = 1
-    m[v, u] = 1
-  G = Graph(m, format='adjacency_matrix')
+  if req.directed:
+    for u, v in req.edges:
+      m[u, v] = 1
+    G = DiGraph(m, format='adjacency_matrix')
+  else:
+    for u, v in req.edges:
+      m[u, v] = 1
+      m[v, u] = 1
+    G = Graph(m, format='adjacency_matrix')
   # G has 0-indexed vertices. Convert 1-indexed one-line to 0-indexed list
   # so is_hop can use p[v] with list indexing.
   perm_0 = [x - 1 for x in req.one_line]

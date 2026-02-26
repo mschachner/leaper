@@ -1,23 +1,39 @@
 import { useMemo, useState } from 'react';
-import graphLibrary from './graphLibrary';
+import graphLibrary from '../lib/graphLibrary';
 
-function GraphLibraryModal({ onLoad, onClose }) {
+const TABS = [
+    { label: 'All',        family: null },
+    { label: 'Complete',   family: 'Complete' },
+    { label: 'Cycles',     family: 'Cycles' },
+    { label: 'Paths',      family: 'Paths' },
+    { label: 'Grids',      family: 'Grids' },
+    { label: 'Bipartite',  family: 'Bipartite' },
+    { label: 'Famous',     family: 'Famous' },
+  ];
+
+function GraphLibraryModal({ onLoad, onClose, isDirected }) {
     const [search, setSearch] = useState('');
-    const [tagFilter, setTagFilter] = useState('all');
+    const [activeTab, setActiveTab] = useState(null);
 
-    const allTags = useMemo(() => {
-        const tags = new Set();
-        graphLibrary.forEach((g) => g.tags?.forEach((t => tags.add(t))));
-        return ['all', ...Array.from(tags).sort()];
-    }, []);
-
-    const filtered = useMemo(() => {
+    // Filter library by directed/undirected first
+    const directedFiltered = useMemo(() => {
         return graphLibrary.filter((g) => {
-            const matchesSearch = g.name.toLowerCase().includes(search.toLowerCase());
-            const matchesTag = tagFilter === 'all' || g.tags?.includes(tagFilter);
-            return matchesSearch && matchesTag;
-        })
-    }, [search, tagFilter]);
+            const graphIsDirected = g.directed === true;
+            return graphIsDirected === (isDirected === true);
+        });
+    }, [isDirected]);
+
+    // Filter by active tab (family)
+    const tabFiltered = activeTab
+    ? directedFiltered.filter((g) => g.family === activeTab)
+    : directedFiltered;
+
+    // Filter by search query
+    const filtered = search.trim()
+        ? tabFiltered.filter((g) =>
+            g.name.toLowerCase().includes(search.trim().toLowerCase())
+        )
+        : tabFiltered;
 
     return (
         <div style={{
@@ -30,7 +46,7 @@ function GraphLibraryModal({ onLoad, onClose }) {
                 background: 'rgb(129, 166, 174)',
                 borderRadius: '8px',
                 width: '640px',
-                maxHeight: '80vh',
+                height: '80vh',
                 display: 'flex',
                 flexDirection: 'column',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
@@ -57,6 +73,41 @@ function GraphLibraryModal({ onLoad, onClose }) {
                         }}>x</button>
                 </div>
 
+                {/* Tab row */}
+                <div style={{
+                    display: 'flex',
+                    gap: '0px',
+                    borderBottom: '1px solid #ddd',
+                    marginBottom: '12px',
+                    minHeight: '30px',
+                    overflowX: 'auto',
+                    }}>
+                    {TABS.map((tab) => (
+                        <button
+                        key={tab.label}
+                        onClick={() => setActiveTab(tab.family)}
+                        style={{
+                            padding: '8px 14px',
+                            border: 'none',
+                            borderBottom: activeTab === tab.family
+                            ? '2px solid #4a90d9'
+                            : '2px solid transparent',
+                            background: activeTab === tab.family
+                            ? 'blue'
+                            : 'none',
+                            color: activeTab === tab.family ? '#4a90d9' : '#000',
+                            fontWeight: activeTab === tab.family ? 600 : 400,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'color 0.15s, border-color 0.15s',
+                        }}
+                        >
+                        {tab.label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Search and filter bar */}
                 <div style={{
                     padding: '12px 20px',
@@ -78,20 +129,6 @@ function GraphLibraryModal({ onLoad, onClose }) {
                         }}
                         autoFocus
                     />
-                    <select
-                        value={tagFilter}
-                        onChange={(e) => setTagFilter(e.target.value)}
-                        style={{
-                            padding: '8px',
-                            borderRadius: '4px',
-                            border: '1px solid #ccc'
-                        }}>
-                            {allTags.map((tag)=> (
-                                <option key={tag} value={tag}>
-                                    {tag === 'all' ? 'All families' : tag}
-                                </option>
-                            ))}
-                    </select>
                 </div>
 
                 {/* Graph list */}
@@ -193,6 +230,8 @@ function MiniPreview({ graph }) {
     const vertexMap = {};
     graph.vertices.forEach((v) => { vertexMap[v.id] = v; });
 
+    const isDirected = graph.directed === true;
+
     return (
         <svg
             viewBox={`${minX} ${minY} ${width} ${height}`}
@@ -201,14 +240,46 @@ function MiniPreview({ graph }) {
                 height: '80px',
                 display: 'block'
             }}>
-            {graph.edges.map((e,i) => (
-                <line
-                    key={i}
-                    x1={vertexMap[e.source].x} y1={vertexMap[e.source].y}
-                    x2={vertexMap[e.target].x} y2={vertexMap[e.target].y}
-                    stroke="rgb(0, 0, 0)"
-                />
-            ))}
+            {isDirected && (
+                <defs>
+                    <marker
+                        id="arrowhead"
+                        markerWidth="8" markerHeight="6"
+                        refX="8" refY="3"
+                        orient="auto"
+                    >
+                        <polygon points="0 0, 8 3, 0 6" fill="#666" />
+                    </marker>
+                </defs>
+            )}
+            {graph.edges.map((e,i) => {
+                const sx = vertexMap[e.source].x, sy = vertexMap[e.source].y;
+                const tx = vertexMap[e.target].x, ty = vertexMap[e.target].y;
+                // For directed edges, shorten line to stop at the node radius
+                if (isDirected) {
+                    const dx = tx - sx, dy = ty - sy;
+                    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+                    const r = 8; // node radius
+                    const tx2 = tx - (dx/len)*r, ty2 = ty - (dy/len)*r;
+                    return (
+                        <line
+                            key={i}
+                            x1={sx} y1={sy}
+                            x2={tx2} y2={ty2}
+                            stroke="#666"
+                            markerEnd="url(#arrowhead)"
+                        />
+                    );
+                }
+                return (
+                    <line
+                        key={i}
+                        x1={sx} y1={sy}
+                        x2={tx} y2={ty}
+                        stroke="rgb(0, 0, 0)"
+                    />
+                );
+            })}
             {graph.vertices.map((v) => (
                 <circle
                     key={v.id}

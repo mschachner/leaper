@@ -1,4 +1,6 @@
-function HopPalette({ hops, onHover, onUnhover, selectedHop, onRemove, onPerform }) {
+import { shiftCycleNotation } from '../lib/permUtils';
+
+function HopPalette({ hops, onHover, onUnhover, selectedHop, onRemove, onPerform, indexBase = 1, nodeCount = 0 }) {
   if (hops.length === 0) return null;
 
   return (
@@ -17,6 +19,7 @@ function HopPalette({ hops, onHover, onUnhover, selectedHop, onRemove, onPerform
       {hops.map((hop, i) => {
         const isSelected = selectedHop &&
           selectedHop.one_line.join(',') === hop.one_line.join(',');
+        const isCompatible = hop.one_line.length === nodeCount;
 
         return (
           <div
@@ -32,16 +35,18 @@ function HopPalette({ hops, onHover, onUnhover, selectedHop, onRemove, onPerform
               marginBottom: '3px',
               fontSize: '12px',
               cursor: 'default',
+              opacity: isCompatible ? 1 : 0.45,
               transition: 'border-color 0.15s, background 0.15s',
             }}
             onMouseEnter={() => onHover(hop)}
             onMouseLeave={() => onUnhover()}
+            title={isCompatible ? undefined : `Incompatible: hop is for ${hop.one_line.length}-node graph`}
           >
             <span style={{
               fontFamily: 'monospace',
               flex: 1,
             }}>
-              {hop.cycle}
+              {indexBase === 0 ? shiftCycleNotation(hop.cycle, -1) : hop.cycle}
             </span>
             <span style={{
               fontSize: '10px',
@@ -58,10 +63,10 @@ function HopPalette({ hops, onHover, onUnhover, selectedHop, onRemove, onPerform
                 color: '#4a90d9',
                 borderRadius: '3px',
                 padding: '1px 6px',
-                cursor: 'pointer',
+                cursor: isCompatible ? 'pointer' : 'not-allowed',
                 fontSize: '10px',
               }}
-              title="Perform this hop"
+              title={isCompatible ? 'Perform this hop' : 'Incompatible with current graph'}
             >
               ▶
             </button>

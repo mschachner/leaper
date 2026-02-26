@@ -14,11 +14,20 @@ from sage.graphs.digraph_generators import DiGraphGenerators
 DiGraphs = DiGraphGenerators()
 
 
+def _hop_neighbors(G, v):
+    """
+    Return the neighbors of ``v`` relevant for hops:
+    out-neighbors for directed graphs, all neighbors for undirected.
+    """
+    if G.is_directed():
+        return G.neighbors_out(v)
+    return G.neighbors(v)
+
 def is_hop(G, p):
     """
     Return True if the permutation ``p`` is a hop on the graph ``G``.
     """
-    return all(p[v] in G.neighbors(v) for v in G.vertices())
+    return all(p[v] in _hop_neighbors(G, v) for v in G.vertices())
 
 def hops(G):
     """
