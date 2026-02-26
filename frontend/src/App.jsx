@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { serializeGraph, deserializeGraph, validateGraphData } from './lib/graphFile';
+import { checkHealth } from './lib/api';
 
 import ControlPanel from './components/ControlPanel';
 import GraphLibraryModal from './components/graphLibraryModal';
@@ -24,19 +25,20 @@ import useDrawHop from './hooks/useDrawHop';
 function App() {
   const nextNodeIdRef = useRef(0);
 
-  const [mode, setMode]                 = useState('select');
-  const [edgeSource, setEdgeSource]     = useState(null);
-  const [fileName, setFileName]         = useState(null);
-  const [isDirty, setIsDirty]           = useState(false);
-  const [libraryOpen, setLibraryOpen]   = useState(false);
-  const [showLabels, setShowLabels]     = useState(true);
-  const [workspace, setWorkspace]       = useState([]);
-  const [sidebarWidth, setSidebarWidth] = useState(300);
-  const [snapshotView, setSnapshotView] = useState(null);
-  const [hopPalette, setHopPalette]     = useState([]);
-  const [indexBase, setIndexBase]       = useState(1);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [isDirected, setIsDirected]    = useState(false);
+  const [mode, setMode]                   = useState('select');
+  const [edgeSource, setEdgeSource]       = useState(null);
+  const [fileName, setFileName]           = useState(null);
+  const [isDirty, setIsDirty]             = useState(false);
+  const [libraryOpen, setLibraryOpen]     = useState(false);
+  const [showLabels, setShowLabels]       = useState(true);
+  const [workspace, setWorkspace]         = useState([]);
+  const [sidebarWidth, setSidebarWidth]   = useState(300);
+  const [snapshotView, setSnapshotView]   = useState(null);
+  const [hopPalette, setHopPalette]       = useState([]);
+  const [indexBase, setIndexBase]         = useState(1);
+  const [settingsOpen, setSettingsOpen]   = useState(false);
+  const [isDirected, setIsDirected]       = useState(false);
+  const [backendOnline, setBackendOnline] = useState(true);
   
   const { cyRef, containerRef } = useCytoscape();
   const { toasts, showToast, dismissToast } = useToast();
@@ -518,6 +520,12 @@ function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleDelete, saveSnapshot, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen, libraryOpen, settingsOpen]);
 
+  // Check backend health
+  useEffect(() => {
+    checkHealth().then(setBackendOnline);
+  }, []);
+
+
   const {
     drawingHop, setDrawingHop,
     handleDrawHopTap,
@@ -540,6 +548,20 @@ function App() {
       height: '100vh',
       display: 'flex',
       flexDirection: 'column' }}>
+
+      {!backendOnline && (
+        <div style={{
+          background: '#fff3cd',
+          color: '#856404',
+          padding: '8px 16px',
+          fontSize: '13px',
+          textAlign: 'center',
+          borderBottom: '1px solid #ffc107',
+        }}>
+          Backend not reachable — computation features are unavailable.
+          You can still edit and save graphs.
+        </div>
+      )}
 
       {/* Menu bar */}
       <MenuBar
