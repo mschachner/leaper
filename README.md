@@ -17,7 +17,7 @@ Leaper is a React app built for exploring these and many related questions. Draw
 
 ## Features
 - **Graph-drawing canvas**. Draw, modify, save, and export graphs. Powered by [Cytoscape](https://cytoscape.org/).
-- **Persistent workspace**. Leaper remembers every computation you make and the graphs they were computed on.
+- **Persistent workspace**. Remembers every computation you make and the graphs they were computed on.
 - **Graph library**. A library of famous and important graphs to explore hops and leaps on.
 - **Interactive hop/leap explorer**. Draw hops and find leaps on your graph without doing the full, lengthy computations.
 
