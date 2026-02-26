@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createEntry } from '../lib/workspace';
+import { API_URL } from '../lib/api';
 
 function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
     const [loading, setLoading] = useState(false);
@@ -126,7 +127,7 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
                     label="Leap group"
                     loading={loading}
                     onClick={() => runComputation(
-                        `http://localhost:8000/leap-group?n=${leapN}`,
+                        `${API_URL}/leap-group?n=${leapN}`,
                         'leap-group',
                         { n: leapN },
                     )}
@@ -143,7 +144,7 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
                     label="Find all hops"
                     loading={loading}
                     onClick={() => runComputation(
-                        'http://localhost:8000/hops',
+                        `${API_URL}/hops`,
                         'hops',
                         {},
                     )}
@@ -152,7 +153,7 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
                     label="Find one hop"
                     loading={loading}
                     onClick={() => runComputation(
-                        'http://localhost:8000/hop',
+                        `${API_URL}/hop`,
                         'hop',
                         {},
                     )}

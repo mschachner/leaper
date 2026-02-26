@@ -2,7 +2,15 @@ import http
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+leaper_paths = [
+    os.path.join(os.path.dirname(__file__), '..', 'src'),  # local dev
+    os.path.dirname(__file__),                               # Docker (/app)
+]
+for p in leaper_paths:
+    leaper_dir = os.path.join(p, 'leaper')
+    if os.path.isdir(leaper_dir):
+        sys.path.insert(0, p)
+        break
 
 from fastapi import FastAPI, HTTPException
 from models import GraphInput, LeapGroupResponse, HopsResponse, HopData, VerifyHopRequest
@@ -18,9 +26,18 @@ app = FastAPI(
 
 from fastapi.middleware.cors import CORSMiddleware
 
+allowed_origins = [
+  "http://localhost:5173",
+  "http://localhost:4173",
+]
+
+production_origin = os.environ.get("CORS_ORIGIN")
+if production_origin:
+  allowed_origins.append(production_origin)
+
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=["http://localhost:5173"],
+  allow_origins=allowed_origins,
   allow_methods=["*"],
   allow_headers=["*"],
 )
@@ -43,6 +60,10 @@ def build_sage_graph(data: GraphInput):
 @app.get("/")
 def root():
   return {"message": "Leaper API is running"}
+
+@app.get("/health")
+def health():
+  return {"status": "ok"}
 
 
 @app.post("/leap-group", response_model=LeapGroupResponse)

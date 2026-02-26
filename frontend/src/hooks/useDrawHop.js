@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toCycleNotation } from '../lib/permUtils';
 import { createEntry } from '../lib/workspace';
+import { API_URL } from '../lib/api';
 
 export default function useDrawHop({
     cyRef,
@@ -101,7 +102,7 @@ export default function useDrawHop({
         const graphData = getGraphData();
     
         try {
-          const resp = await fetch('http://localhost:8000/verify-hop', {
+          const resp = await fetch(`${API_URL}/verify-hop`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
