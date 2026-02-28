@@ -1,4 +1,4 @@
-# Leaper: Hop and leap explorer
+# [Leaper](https://mark-schachner.com/leaper): Hop and leap explorer
 
 ```
 🐸 - 🐸 - 🐸 - 🐸 - 🐸      There are 25 frogs on 25 lilypads, spaced out in a grid like so.
@@ -22,8 +22,12 @@ Leaper is a React app built for exploring these and many related questions. Draw
 - **Interactive hop/leap explorer**. Draw hops and find leaps on your graph without doing the full, lengthy computations.
 
 ## Setup / Installation
+[Try it here!](https://mark-schachner.com/leaper)
+
+### Local setup
 ```
 npm install && npm run dev
 ```
 
+## Development
 Companion-programmed with Claude.
