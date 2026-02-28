@@ -25,23 +25,11 @@ function Sidebar({ children, width, onWidthChange }) {
   }, [onWidthChange]);
 
   return (
-    <div style={{
-      width: `${width}px`,
-      flexShrink: 0,
-      borderLeft: '1px solid #ddd',
-      display: 'flex',
-      flexDirection: 'column',
-      background: '#fafafa',
-      color: '#000',
-      position: 'relative',
-    }}>
+    <div className="sidebar" style={{ width: `${width}px` }}>
       {/* Drag handle */}
       <div
         onMouseDown={onDragStart}
-        style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0,
-          width: '8px', cursor: 'col-resize', zIndex: 10,
-        }}
+        className="sidebar-drag-handle"
       />
       {children}
     </div>

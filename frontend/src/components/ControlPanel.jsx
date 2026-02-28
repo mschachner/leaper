@@ -35,7 +35,7 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
      * @param {string} type     - Workspace entry type
      * @param {object} params   - Entry params for display.
      */
-    
+
     const runComputation = async (url, type, params) => {
         const graphData = getGraphData();
         if (!graphData || graphData.vertices.length == 0) {
@@ -93,36 +93,23 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
     }, []);
 
     return (
-        <div style={{
-            padding: '16px',
-            borderBottom: '1px solid #ddd',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px'
-        }}>
-            <h3 style = {{ margin: 0, fontSize: '14px' }}>Compute</h3>
+        <div className="control-panel">
+            <h3 className="control-panel-title">Compute</h3>
 
             {/* Leap group row */}
 
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-            }}>
-                <label style={{ fontSize: '14px' }}>n =</label>
+            <div className="control-panel-row">
+                <div className="control-panel-row">
+                <label className="control-panel-label">n =</label>
                 <input
                     type="number"
                     min={1}
                     value={leapN}
                     onChange={(e) => setleapN(Math.max(1, parseInt(e.target.value,10) || 1))}
                     disabled={loading}
-                    style={{
-                        width: '50px',
-                        padding: '4px 8px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                    }}
+                    className="control-panel-input"
                 />
+                </div>
                 <ComputeButton
                     label="Leap group"
                     loading={loading}
@@ -132,16 +119,8 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
                         { n: leapN },
                     )}
                 />
-            </div>
-
-            {/* Hops row */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-            }}>
                 <ComputeButton
-                    label="Find all hops"
+                    label="All hops"
                     loading={loading}
                     onClick={() => runComputation(
                         `${API_URL}/hops`,
@@ -150,7 +129,7 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
                     )}
                 />
                 <ComputeButton
-                    label="Find one hop"
+                    label="One hop"
                     loading={loading}
                     onClick={() => runComputation(
                         `${API_URL}/hop`,
@@ -163,28 +142,13 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
             {/* Live timer + cancel */}
 
             {loading && (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                }}>
-                    <span style={{
-                        fontSize: '13px',
-                        color: '#888'
-                    }}>
+                <div className="control-panel-row">
+                    <span className="control-panel-elapsed">
                         {liveElapsed}s
                     </span>
                     <button
                         onClick={cancelComputation}
-                        style={{
-                            padding: '3px 10px',
-                            background: '#e74c3c',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                        }}
+                        className="control-panel-cancel"
                     >
                         Cancel
                     </button>
@@ -192,14 +156,7 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
             )}
 
             {error && (
-                <div style={{
-                    padding: '8px',
-                    background: '#fdecea',
-                    border: '1px solid #e74c3c',
-                    borderRadius: '4px',
-                    color: '#c0392b',
-                    fontSize: '13px',
-                }}>
+                <div className="control-panel-error">
                     {error}
                 </div>
                 )}
@@ -217,15 +174,7 @@ function ComputeButton({ label, loading, onClick }) {
         <button
             onClick={onClick}
             disabled={loading}
-            style={{
-                padding: '6px 14px',
-                background: loading ? '#95a5a6' : '#27ae60',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: loading ? 'default' : 'pointer',
-                fontSize: '14px',
-            }}
+            className="compute-button"
         >
             {label}
         </button>

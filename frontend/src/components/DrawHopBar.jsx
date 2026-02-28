@@ -4,22 +4,11 @@ function DrawHopBar({ drawingHop, nodeCount, onVerifyAndSave, onPerform, onCance
     const hasPending = drawingHop.pendingSource !== null;
 
     return (
-        <div style={{
-            padding: '6px 12px',
-            background: '#e8f5e9',
-            borderBottom: '1px solid #66bb6a',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '13px',
-        }}>
-            <span style={{
-                color: '#2e7d32',
-                fontWeight: 'bold'
-            }}>
+        <div className="draw-hop-bar">
+            <span className="draw-hop-bar-label">
                 Drawing hop
             </span>
-            <span style={{ color: '#555' }}>
+            <span className="draw-hop-bar-status">
                 {assignedCount}/{nodeCount} vertices assigned
                 {hasPending && ' (click target vertex)'}
             </span>
@@ -27,15 +16,7 @@ function DrawHopBar({ drawingHop, nodeCount, onVerifyAndSave, onPerform, onCance
             {assignedCount > 0 && (
                 <button
                     onClick={onUndo}
-                    style = {{
-                        padding: '3px 10px',
-                        background: '#fff',
-                        color: '#333',
-                        border: '1px solid #aaa',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                    }}>
+                    className="draw-hop-bar-undo">
                     Undo last
                 </button>
             )}
@@ -44,44 +25,19 @@ function DrawHopBar({ drawingHop, nodeCount, onVerifyAndSave, onPerform, onCance
                 <>
                     <button
                         onClick={onVerifyAndSave}
-                        style={{
-                            padding: '3px 10px',
-                            background: '#27ae60',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                        }}>
+                        className="draw-hop-bar-verify">
                         Verify & save hop
                     </button>
                     <button
                         onClick={onPerform}
-                        style={{
-                            padding: '3px 10px',
-                            background: '#4a90d9',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                        }}>
+                        className="draw-hop-bar-perform">
                         Perform
                     </button>
                 </>
             )}
             <button
                 onClick={onCancel}
-                style={{
-                    padding: '3px 10px',
-                    background: '#fff',
-                    color: '#333',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    marginLeft: 'auto',
-                }}>
+                className="toolbar-button">
                 Cancel
             </button>
         </div>

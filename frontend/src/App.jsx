@@ -32,7 +32,7 @@ function App() {
   const [libraryOpen, setLibraryOpen]     = useState(false);
   const [showLabels, setShowLabels]       = useState(true);
   const [workspace, setWorkspace]         = useState([]);
-  const [sidebarWidth, setSidebarWidth]   = useState(300);
+  const [sidebarWidth, setSidebarWidth]   = useState(400);
   const [snapshotView, setSnapshotView]   = useState(null);
   const [hopPalette, setHopPalette]       = useState([]);
   const [indexBase, setIndexBase]         = useState(1);
@@ -543,21 +543,10 @@ function App() {
   });
 
   return (
-    <div style={{
-      width: '100vw',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column' }}>
+    <div className="appRoot">
 
       {!backendOnline && (
-        <div style={{
-          background: '#fff3cd',
-          color: '#856404',
-          padding: '8px 16px',
-          fontSize: '13px',
-          textAlign: 'center',
-          borderBottom: '1px solid #ffc107',
-        }}>
+        <div className='backendOffline'>
           Backend not reachable — computation features are unavailable.
           You can still edit and save graphs.
         </div>
@@ -576,71 +565,37 @@ function App() {
         onToggleDirected={handleToggleDirected}
       />
       
-      {/* Draw hop status bar */}
-      {mode === 'drawHop' && drawingHop && (
-        <DrawHopBar
-          drawingHop={drawingHop}
-          nodeCount={cyRef.current ? cyRef.current.nodes().length : 0}
-          onVerifyAndSave={handleVerifyHop}
-          onPerform={handlePerformDrawnHop}
-          onCancel={() => {
-            setMode('select');
-          }}
-          onUndo={handleUndoDrawAssignment}
-        />
-      )}
+
 
       {/* Main area: canvas + sidebar */}
 
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        overflow: 'hidden'
-      }}>
+      <div className="mainArea">
 
         {/* Canvas column: toolbar + banner + graph */}
-        <div style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
+        <div className="canvasColumn">
         <Toast toasts={toasts} onDismiss={dismissToast} />
 
         <Toolbar
           mode={mode}
           onSetMode={setMode}
           onDelete={handleDelete}
+          drawingHop={drawingHop}
           setDrawingHop={setDrawingHop}
+          onVerifyHop={handleVerifyHop}
+          onPerformDrawnHop={handlePerformDrawnHop}
+          onUndoDrawAssignment={handleUndoDrawAssignment}
           setEdgeSource={setEdgeSource}
           setSelectedHop={setSelectedHop}
           onOpenSettings={() => setSettingsOpen(true)}
+          cyRef={cyRef}
         />
         {/* Snapshot banner */}
         {snapshotView && (
-          <div style={{
-            padding: '8px 16px',
-            background: '#fff3cd',
-            borderBottom: '1px solid #ffc107',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '14px',
-            color: '#856404'
-          }}>
+          <div className="snapshotBanner">
             <span>Viewing a graph from a previous computation</span>
             <button
               onClick={exitSnapshotView}
-              style={{
-                padding: '4px 12px',
-                background: '#ffc107',
-                color: '#856404',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '13px',
-              }}
+              className="snapshotBannerButton"
             >
               Back to current graph
             </button>
@@ -648,15 +603,14 @@ function App() {
         )}
 
         {/* Graph canvas */}
-        <div ref={containerRef} style={{
-          flex: 1,
-          minWidth: 0,
-          zIndex: 2
-        }} />
+        <div ref={containerRef} className='canvas' />
         </div>
 
         {/* Sidebar */}
-        <Sidebar width={sidebarWidth} onWidthChange={setSidebarWidth}>
+        <Sidebar 
+          width={sidebarWidth}
+          onWidthChange={setSidebarWidth}
+        >
           <WorkingLeap
               labelPerm={labelPerm}
               hopHistory={hopHistory}
@@ -683,30 +637,14 @@ function App() {
             addEntry={addWorkspaceEntry}
           />
           {/* Notebook header */}
-          <div style={{
-            padding: '8px 16px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: '1px solid #ddd',
-          }}>
-            <span style={{
-              fontSize: '12px',
-              color: '#888',
-              textTransform: 'uppercase'
-            }}>
+          <div className="notebookHeader">
+            <span className="notebookHeaderLabel">
               Workspace
             </span>
             {workspace.length > 0 && (
               <button
                 onClick={clearWorkspace}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#aaa',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                }}
+                className="notebookClearButton"
               >
                 Clear all
               </button>
@@ -716,18 +654,10 @@ function App() {
           {/* Scrollable notebook entries */}
           <div
             id="notebook-scroll"
-            style={{
-              flex: 1,
-              overflowY: 'auto'
-            }}
+            className="notebookScroll"
           >
             {workspace.length === 0 ? (
-              <div style={{
-                padding: '24px 16px',
-                color: '#bbb',
-                fontSize: '13px',
-                textAlign: 'center'
-              }}>
+              <div className="notebookEmpty">
                 Run a computation to see results here.
               </div>
             ) : (
@@ -764,6 +694,8 @@ function App() {
         setShowLabels={setShowLabels}
         indexBase={indexBase}
         setIndexBase={setIndexBase}
+        isDirected={isDirected}
+        onToggleDirected={handleToggleDirected}
       />
     )}
     </div>

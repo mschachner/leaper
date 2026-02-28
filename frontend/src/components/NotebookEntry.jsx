@@ -3,26 +3,11 @@ import { shiftCycleNotation } from '../lib/permUtils';
 
 function NotebookEntry({ entry, onRemove, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onViewSnapshot, onPinHop, indexBase = 1 }) {
     return (
-        <div style={{
-            padding: '10px 14px',
-            borderBottom: '1px solid #eee',
-            position: 'relative',
-        }}>
+        <div className="notebook-entry">
             {/* Dismiss button */}
             <button
                 onClick={() => onRemove(entry.id)}
-                style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    background: 'none',
-                    border: 'none',
-                    color: '#bbb',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    padding: '0 4px',
-                    lineHeight: '1',
-                }}
+                className="notebook-entry-dismiss"
                 title="Remove this entry"
             >
                 ✕
@@ -70,42 +55,21 @@ function EntryHeader({ entry, onViewSnapshot }) {
     }
 
     return (
-        <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            marginBottom: '6px',
-            paddingRight: '20px', // leave room for ✕ button
-        }}>
+        <div className="entry-header">
             <div>
-                <span style={{
-                    fontWeight: 'bold',
-                    fontSize: '13px'
-                }}>
+                <span className="entry-header-title">
                     {title}
                 </span>
                 {entry.graphSnapshot && (
                     <button
                         onClick={() => onViewSnapshot(entry.graphSnapshot)}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#4a90d9',
-                            cursor: 'pointer',
-                            fontSize: '11px',
-                            marginLeft: '6px',
-                            padding: 0,
-                            textDecoration: 'underline',
-                        }}
+                        className="entry-header-see-graph"
                     >
                         see graph
                     </button>
                 )}
             </div>
-            <span style={{
-                fontSize: '11px',
-                color: '#aaa'
-            }}>
+            <span className="entry-header-meta">
                 {time}
                 {entry.elapsed && ` • ${entry.elapsed}s`}
             </span>
@@ -129,10 +93,7 @@ function EntryBody({ entry, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
                         indexBase={indexBase}
             />;
         default:
-            return <div style={{
-                fontSize: '13px',
-                color: '#888'
-            }}>
+            return <div className="entry-body-unknown">
                 Unknown entry type
             </div>
     }
@@ -140,25 +101,11 @@ function EntryBody({ entry, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
 
 function LeapGroupBody({ result }) {
     return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px'
-        }}>
-            <div style={{
-                padding: '6px 8px',
-                background: '#fff',
-                border: '1px solid #e0e0e0',
-                borderRadius: '4px',
-                fontFamily: 'monospace',
-                fontSize: '13px',
-            }}>
+        <div className="leap-group-body">
+            <div className="leap-group-structure">
                 {result.structure}
             </div>
-            <div style={{
-                fontSize: '12px',
-                color: '#888'
-            }}>
+            <div className="leap-group-order">
                 Order: {result.order}
             </div>
         </div>
@@ -171,11 +118,7 @@ function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
 
     if (result.count === 0) {
         return (
-            <div style={{
-                fontSize: '13px',
-                color: '#888',
-                fontStyle: 'italic'
-            }}>
+            <div className="hops-body-empty">
                 No hops found
             </div>
         );
@@ -185,15 +128,8 @@ function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
     const hasMore = result.hops.length > PREVIEW_COUNT;
 
     return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px'
-        }}>
-            <div style={{
-                fontSize: '12px',
-                color: '#888'
-            }}>
+        <div className="hops-body">
+            <div className="hops-body-count">
                 {result.count} hop{result.count !== 1 ? 's' : ''} found
             </div>
             {hopsToShow.map((hop, i) => (
@@ -213,15 +149,7 @@ function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
             {hasMore && (
                 <button
                     onClick={() => setExpanded(!expanded)}
-                    style={{
-                        background: 'none',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
-                        color: '#4a90d9',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                    }}
+                    className="hops-body-toggle"
                 >
                     {expanded
                         ? 'Show fewer'
@@ -244,32 +172,14 @@ function HopItem({ hop, selected, onHover, onUnhover, onPerform, onPin, indexBas
         <div
             onMouseEnter={() => onHover()}
             onMouseLeave={() => onUnhover()}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '4px 8px',
-                background: selected ? '#e8f0fe' : '#fff',
-                border: `1px solid ${selected ? '#4a90d9' : '#e0e0e0'}`,
-                borderRadius: '4px',
-                fontFamily: 'monospace',
-                fontSize: '13px',
-                cursor: 'default',
-                transition: 'border-color 0.15s, background 0.15s',
-            }}
+            className={`hop-item${selected ? ' selected' : ''}`}
             title={`One-line: [${displayOneLine.join(', ')}]`}
         >
-            <span style={{ flex: 1 }}>{displayCycle}</span>
+            <span className="hop-item-cycle">{displayCycle}</span>
             {onPerform && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onPerform(); }}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#4a90d9',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        padding: '0 4px',
-                    }}
+                    className="hop-item-perform"
                     title="Perform this hop"
                 >
                     ▶
@@ -278,14 +188,7 @@ function HopItem({ hop, selected, onHover, onUnhover, onPerform, onPin, indexBas
             {onPin && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onPin(); }}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#aaa',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        padding: '0 4px',
-                    }}
+                    className="hop-item-pin"
                     title="Pin to hop palette"
                 >
                     pin
