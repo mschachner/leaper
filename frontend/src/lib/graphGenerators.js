@@ -345,3 +345,20 @@ export function makeComplete(n) {
   
     return { vertices, edges };
   }
+
+  /**
+   * Random graph on n vertices.
+   */
+
+  export function makeRandom(directed, n=6, p = 0.3) {
+    const vertices = polygonLayout(n);
+    const edges = [];
+
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (!directed && i >= j) continue;
+        if (Math.random() < p) edges.push({ source: i, target: j});
+      }
+    }
+    return { vertices, edges };
+  }

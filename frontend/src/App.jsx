@@ -25,7 +25,7 @@ import useDrawHop from './hooks/useDrawHop';
 function App() {
   const nextNodeIdRef = useRef(0);
 
-  const [mode, setMode]                   = useState('select');
+  const [mode, setMode]                   = useState('addVertex');
   const [edgeSource, setEdgeSource]       = useState(null);
   const [fileName, setFileName]           = useState(null);
   const [isDirty, setIsDirty]             = useState(false);
@@ -39,6 +39,7 @@ function App() {
   const [settingsOpen, setSettingsOpen]   = useState(false);
   const [isDirected, setIsDirected]       = useState(false);
   const [backendOnline, setBackendOnline] = useState(true);
+  const [canvasEmpty, setCanvasEmpty]     = useState(true);
   
   const { cyRef, containerRef } = useCytoscape();
   const { toasts, showToast, dismissToast } = useToast();
@@ -525,6 +526,15 @@ function App() {
     checkHealth().then(setBackendOnline);
   }, []);
 
+  // Empty canvas placeholder
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const canvasEmpty = () => setCanvasEmpty(cy.nodes().length === 0);
+    cy.on('add remove', canvasEmpty);
+  }, []);
 
   const {
     drawingHop, setDrawingHop,
@@ -573,37 +583,45 @@ function App() {
 
         {/* Canvas column: toolbar + banner + graph */}
         <div className="canvasColumn">
-        <Toast toasts={toasts} onDismiss={dismissToast} />
+          <Toast toasts={toasts} onDismiss={dismissToast} />
 
-        <Toolbar
-          mode={mode}
-          onSetMode={setMode}
-          onDelete={handleDelete}
-          drawingHop={drawingHop}
-          setDrawingHop={setDrawingHop}
-          onVerifyHop={handleVerifyHop}
-          onPerformDrawnHop={handlePerformDrawnHop}
-          onUndoDrawAssignment={handleUndoDrawAssignment}
-          setEdgeSource={setEdgeSource}
-          setSelectedHop={setSelectedHop}
-          onOpenSettings={() => setSettingsOpen(true)}
-          cyRef={cyRef}
-        />
-        {/* Snapshot banner */}
-        {snapshotView && (
-          <div className="snapshotBanner">
-            <span>Viewing a graph from a previous computation</span>
-            <button
-              onClick={exitSnapshotView}
-              className="snapshotBannerButton"
-            >
-              Back to current graph
-            </button>
-          </div>
-        )}
+          <Toolbar
+            mode={mode}
+            onSetMode={setMode}
+            onDelete={handleDelete}
+            drawingHop={drawingHop}
+            setDrawingHop={setDrawingHop}
+            onVerifyHop={handleVerifyHop}
+            onPerformDrawnHop={handlePerformDrawnHop}
+            onUndoDrawAssignment={handleUndoDrawAssignment}
+            setEdgeSource={setEdgeSource}
+            setSelectedHop={setSelectedHop}
+            onOpenSettings={() => setSettingsOpen(true)}
+            cyRef={cyRef}
+          />
+          {/* Snapshot banner */}
+          {snapshotView && (
+            <div className="snapshotBanner">
+              <span>Viewing a graph from a previous computation</span>
+              <button
+                onClick={exitSnapshotView}
+                className="snapshotBannerButton"
+              >
+                Back to current graph
+              </button>
+            </div>
+          )}
 
-        {/* Graph canvas */}
-        <div ref={containerRef} className='canvas' />
+          {/* Graph canvas */}
+          <div ref={containerRef} className='canvas' />
+
+          {/* Empty canvas placeholder */}
+          {canvasEmpty && (
+            <div className='canvasPlaceholder' >
+              Click or tap anywhere to place a vertex!
+            </div>
+          )}
+
         </div>
 
         {/* Sidebar */}
