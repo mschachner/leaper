@@ -1,6 +1,5 @@
 /**
  * Settings modal — extensible container for app-wide preferences.
- * Currently includes: graph layout, label visibility, index base.
  */
 function SettingsModal({
   onClose, 

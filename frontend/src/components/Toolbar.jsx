@@ -47,13 +47,15 @@ function Toolbar({
 
         <div className="toolbar-spacer" />
 
-        <button
-          onClick={onOpenSettings}
-          className="toolbar-button settings-button"
-          title="Settings"
-        >
-          ⚙
-        </button>
+        <div className="settings-button">
+          <button
+            onClick={onOpenSettings}
+            className="toolbar-button"
+            title="Settings"
+          >
+            ⚙
+          </button>
+        </div>
       </div>
     );
 }

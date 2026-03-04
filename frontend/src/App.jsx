@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { serializeGraph, deserializeGraph, validateGraphData } from './lib/graphFile';
 import { checkHealth } from './lib/api';
+import { makeRandom } from './lib/graphGenerators';
 
 import ControlPanel from './components/ControlPanel';
 import GraphLibraryModal from './components/graphLibraryModal';
@@ -13,6 +14,7 @@ import MenuBar from './components/MenuBar';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import SettingsModal from './components/SettingsModal';
+import Randomizer from './components/Randomizer'
 
 
 import useCytoscape from './hooks/useCytoscape';
@@ -20,26 +22,29 @@ import useFileOperations from './hooks/useFileOperations';
 import useHopInteraction from './hooks/useHopInteraction';
 import useToast from './hooks/useToast';
 import useDrawHop from './hooks/useDrawHop';
+import { clearFileHandle } from './lib/fileAccess';
 
 
 function App() {
   const nextNodeIdRef = useRef(0);
 
-  const [mode, setMode]                   = useState('addVertex');
-  const [edgeSource, setEdgeSource]       = useState(null);
-  const [fileName, setFileName]           = useState(null);
-  const [isDirty, setIsDirty]             = useState(false);
-  const [libraryOpen, setLibraryOpen]     = useState(false);
-  const [showLabels, setShowLabels]       = useState(true);
-  const [workspace, setWorkspace]         = useState([]);
-  const [sidebarWidth, setSidebarWidth]   = useState(400);
-  const [snapshotView, setSnapshotView]   = useState(null);
-  const [hopPalette, setHopPalette]       = useState([]);
-  const [indexBase, setIndexBase]         = useState(1);
-  const [settingsOpen, setSettingsOpen]   = useState(false);
-  const [isDirected, setIsDirected]       = useState(false);
-  const [backendOnline, setBackendOnline] = useState(true);
-  const [canvasEmpty, setCanvasEmpty]     = useState(true);
+  const [mode, setMode]                     = useState('addVertex');
+  const [edgeSource, setEdgeSource]         = useState(null);
+  const [fileName, setFileName]             = useState(null);
+  const [isDirty, setIsDirty]               = useState(false);
+  const [libraryOpen, setLibraryOpen]       = useState(false);
+  const [showLabels, setShowLabels]         = useState(true);
+  const [workspace, setWorkspace]           = useState([]);
+  const [sidebarWidth, setSidebarWidth]     = useState(400);
+  const [snapshotView, setSnapshotView]     = useState(null);
+  const [hopPalette, setHopPalette]         = useState([]);
+  const [indexBase, setIndexBase]           = useState(1);
+  const [settingsOpen, setSettingsOpen]     = useState(false);
+  const [isDirected, setIsDirected]         = useState(false);
+  const [backendOnline, setBackendOnline]   = useState(true);
+  const [canvasEmpty, setCanvasEmpty]       = useState(true);
+  const [randomizerOpen, setRandomizerOpen] = useState(false);
+  const [randomValues, setRandomValues]     = useState([5,0.3]);
   
   const { cyRef, containerRef } = useCytoscape();
   const { toasts, showToast, dismissToast } = useToast();
@@ -100,6 +105,7 @@ function App() {
 
     return { vertices, edges };
   }, []);
+
 
   // Undo/redo helpers
   const undoStack = useRef([]);
@@ -552,6 +558,29 @@ function App() {
     showToast,
   });
 
+  // Randomizer
+  const handleRandom = useCallback(() => {
+    const confirmMsg = 'You have unsaved changes. Load random graph anyway?';
+    if (isDirty && !window.confirm(confirmMsg)) return;
+
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const graph = makeRandom(isDirected, ...randomValues);
+
+    deserializeGraph(cy,graph, indexBase, isDirected);
+    const maxId = Math.max(-1, ...graph.vertices.map((v) => v.id));
+    nextNodeIdRef.current = maxId + 1;
+
+    clearFileHandle();
+    setFileName(null);
+    setIsDirty(false);
+    setWorkspace([]);
+    setSavedLeaps([]);
+    setHopPalette([]);
+    nextNodeIdRef.current = 0;
+  }, [cyRef, isDirty, indexBase, randomValues, nextNodeIdRef]);
+
   return (
     <div className="appRoot">
 
@@ -569,13 +598,14 @@ function App() {
         onSave={handleSave}
         onSaveAs={handleSaveAs}
         onLibrary={() => setLibraryOpen(true)}
+        randomizerOpen={randomizerOpen}
+        setRandomizerOpen={setRandomizerOpen}
+        randomValues={randomValues}
+        setRandomValues={setRandomValues}
+        onGenerate={handleRandom}
         fileName={fileName}
         isDirty={isDirty}
-        isDirected={isDirected}
-        onToggleDirected={handleToggleDirected}
       />
-      
-
 
       {/* Main area: canvas + sidebar */}
 

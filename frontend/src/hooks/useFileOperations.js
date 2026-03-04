@@ -112,5 +112,5 @@ export default function useFileOperations({
         setHopPalette([]);
     }, [cyRef, isDirty, indexBase, setFileName, setIsDirty, setLibraryOpen, setWorkspace, setSavedLeaps, setHopPalette, nextNodeIdRef]);
 
-    return { handleSave, handleSaveAs, handleOpen, handleNew, handleLoadFromLibrary };
+    return { handleSave, handleSaveAs, handleOpen, handleNew, handleLoadFromLibrary};
 }

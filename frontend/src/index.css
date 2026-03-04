@@ -390,7 +390,8 @@ body {
   align-items: center;
   background: var(--color-bg-sidebar);
   box-shadow: 0px 5px 5px var(--color-bg-canvas-dark);
-  z-index: 1;
+  z-index: 3;
+  position: relative;
 }
 
 .menu-bar-button {
@@ -407,6 +408,8 @@ body {
   transition: border-bottom 0.5s;
   color: var(--color-primary);
 }
+
+
 
 .menu-bar-filename {
   margin-left: 12px;
@@ -438,6 +441,39 @@ body {
 
 .segment-button-right {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* ============== Randomizer ================= */
+
+.randomizer {
+  position: absolute;
+  top: 250%;
+  left: 10px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-sidebar-secondary);
+  border: 2px solid black;
+  box-shadow: 5px 8px 3px rgba(0,0,0,0.2);
+}
+
+.randomizer-buttons {
+  display: flex;
+  align-items: end;
+  font-size: 12px;
+  height: 35px;
+}
+
+.randomizer-label {
+  font-size: 16px;
+}
+
+.randomizer-input {
+  font-size: 12px;
+  margin: 4px;
+}
+
+.randomizer-button {
+  margin: 4px;
 }
 
 
@@ -726,7 +762,7 @@ body {
   box-shadow: 0px 5px 5px var(--color-bg-canvas-dark);
   color: #000;
   position: relative;
-  z-index: 2;
+  z-index: 3;
 }
 
 .sidebar-drag-handle {
@@ -827,9 +863,9 @@ body {
 }
 
 .settings-button {
-  width: 50px;
-  font-size: 22px;
-  border-radius: var(--radius-md);
+  display: flex;
+  align-items: end;
+  height: 30px;
 }
 
 
