@@ -45,7 +45,6 @@ function Toolbar({
 
 
 
-        <div className="toolbar-spacer" />
 
         <div className="settings-button">
           <button

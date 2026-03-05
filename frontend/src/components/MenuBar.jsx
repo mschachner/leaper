@@ -9,10 +9,14 @@ function MenuBar({
     randomizerOpen, setRandomizerOpen,
     randomValues, setRandomValues,
     onGenerate,
+    setHelpOpen,
     fileName, isDirty,
 }) {
     return (
         <div className="menu-bar">
+            <span className="menu-bar-filename">
+                {fileName ? fileName : 'Untitled.leap'}{isDirty ? ' •' : ''}
+            </span>
             <button onClick={onNew}        className="menu-bar-button">New</button>
             <button onClick={onOpen}       className="menu-bar-button">Open</button>
             <button onClick={onSave}       className="menu-bar-button">Save</button>
@@ -29,9 +33,7 @@ function MenuBar({
                 />
                 )}
             </div>
-            <span className="menu-bar-filename">
-                {fileName ? fileName : 'Untitled.leap'}{isDirty ? ' •' : ''}
-            </span>
+            <button onClick={() => setHelpOpen(true)}     className="menu-bar-button">Help</button>
         </div>
     );
 }

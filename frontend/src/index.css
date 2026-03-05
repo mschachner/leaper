@@ -20,8 +20,8 @@ body {
   --color-bg-canvas-dark: rgba(0,0,0,0.15);
   --color-bg-sidebar: #fdf6e3;
   --color-bg-sidebar-secondary: #eee7d5;
-  --color-bg-hover: #f0f4f8;
   --color-border: #ddd;
+  --color-rule: rgb(116, 116, 116);
 
 
   /* Typography */
@@ -412,9 +412,11 @@ body {
 
 
 .menu-bar-filename {
+  width: 100px;
   margin-left: 12px;
   color: #666;
   font-size: 14px;
+  border-right: 1px solid var(--color-border);
 }
 
 .segment-button {
@@ -456,9 +458,20 @@ body {
   box-shadow: 5px 8px 3px rgba(0,0,0,0.2);
 }
 
+.randomizer-header {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--color-bg-sidebar-secondary);
+  color: #000;
+  padding: var(--spacing-xs) 0px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .randomizer-buttons {
   display: flex;
   align-items: end;
+  justify-content: center;
   font-size: 12px;
   height: 35px;
 }
@@ -473,6 +486,7 @@ body {
 }
 
 .randomizer-button {
+  width: 150px;
   margin: 4px;
 }
 
@@ -767,12 +781,18 @@ body {
 
 .sidebar-drag-handle {
   position: absolute;
-  left: 0;
+  left: -5px;
   top: 0;
   bottom: 0;
   width: 8px;
   cursor: col-resize;
   z-index: 10;
+}
+
+.sidebar-drag-handle:hover {
+  background-color: var(--color-border);
+  transition: background-color 0.2s;
+  transition-delay: 0.1s;
 }
 
 
@@ -841,6 +861,7 @@ body {
   color: var(--color-text);
   cursor: pointer;
   font-weight: normal;
+  white-space: nowrap;
 }
 
 .toolbar-button.active, .toolbar-button.active:hover {
@@ -1127,3 +1148,163 @@ body {
   height: 80px;
   display: block;
 }
+
+/* ============== HelpModal ============== */
+
+.help-modal {
+  width: min(1200px, 90vw);
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.help-header {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--color-bg-sidebar-secondary);
+  box-shadow: 0px 5px 5px var(--color-bg-canvas-dark);
+  color: #000;
+  padding: var(--spacing-md) 20px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.help-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.help-toc {
+  width: 200px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  padding: var(--spacing-sm) 12px;
+  overflow-y: auto;
+  background: var(--color-bg-sidebar);
+  box-shadow: 0px 5px 5px var(--color-bg-canvas-dark);
+  z-index: 3;
+}
+
+.help-toc-item, .help-toc-item-active {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  text-align: left;
+  font-size: 16px;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+}
+
+.help-toc-item:hover {
+  background: var(--color-bg-sidebar-secondary);
+}
+
+.help-toc-item-active {
+  border-left: 3px solid var(--color-primary);
+  transition: border-left 0.15s;
+  font-weight: bold;
+  color: var(--color-primary);
+}
+
+
+.help-content {
+  flex: 1;
+  padding: var(--spacing-sm) 12px;
+  overflow-y: auto;
+  background: var(--color-bg-canvas);
+  background-image: url('./assets/canvas-texture.png');
+  background-repeat: repeat;
+}
+
+.help-content h3 {
+  padding-top: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  margin-left: 25px;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.help-content p {
+  line-height: 1.5;
+  text-indent: 12px;
+  margin: 0 50px;
+}
+
+.frog-grid {
+  background: rgba(37, 107, 144, 0.472);
+  border-radius: 30px;
+  padding: var(--spacing-sm);
+  font-size: 18px;
+  border: 4px solid brown;
+  margin: var(--spacing-md) auto;
+}
+
+.frog-grid th, .frog-grid td {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-canvas);
+  box-shadow: 0px 5px 5px var(--color-bg-canvas-dark);
+  border-radius: 25px;
+}
+
+.keyboard-shortcut-table {
+  width: 50%;
+  border-collapse: collapse;
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  margin-left: 75px;
+  border: 1px solid var(--color-border);
+}
+.keyboard-shortcut-table th, .keyboard-shortcut-table td {
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-sidebar);
+  box-shadow: 0px 5px 5px var(--color-bg-canvas-dark);
+}
+.keyboard-shortcut-table th {
+  background: var(--color-bg-sidebar-secondary);
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: #f4f4f4;
+}
+
+.help-blockquote {
+  border: 1px solid var(--color-border);
+  width: 80%;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm);
+  margin: 25px 75px;
+  background: var(--color-bg-sidebar);
+  box-shadow: 0px 5px 5px var(--color-bg-canvas-dark);
+}
+
+.help-content pre {
+  margin: 0;
+  text-align: center;
+  padding: var(--spacing-sm);
+}
+
+.help-table {
+  font-size: 12px;
+}
+
+.help-content ul {
+  margin-bottom: var(--spacing-sm);
+  margin-left: 50px;
+}
+
+.help-content li {
+  margin-bottom: var(--spacing-xs);
+  line-height: 1.5;
+}
+

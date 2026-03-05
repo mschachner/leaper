@@ -356,7 +356,7 @@ export function makeComplete(n) {
 
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        if (!directed && i >= j) continue;
+        if (!directed && i >= j || i === j) continue;
         if (Math.random() < p) edges.push({ source: i, target: j});
       }
     }

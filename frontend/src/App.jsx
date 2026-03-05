@@ -14,8 +14,7 @@ import MenuBar from './components/MenuBar';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import SettingsModal from './components/SettingsModal';
-import Randomizer from './components/Randomizer'
-
+import HelpModal from './components/HelpModal';
 
 import useCytoscape from './hooks/useCytoscape';
 import useFileOperations from './hooks/useFileOperations';
@@ -33,7 +32,7 @@ function App() {
   const [fileName, setFileName]             = useState(null);
   const [isDirty, setIsDirty]               = useState(false);
   const [libraryOpen, setLibraryOpen]       = useState(false);
-  const [showLabels, setShowLabels]         = useState(true);
+  const [showLabels, setShowLabels]         = useState(false);
   const [workspace, setWorkspace]           = useState([]);
   const [sidebarWidth, setSidebarWidth]     = useState(400);
   const [snapshotView, setSnapshotView]     = useState(null);
@@ -45,6 +44,7 @@ function App() {
   const [canvasEmpty, setCanvasEmpty]       = useState(true);
   const [randomizerOpen, setRandomizerOpen] = useState(false);
   const [randomValues, setRandomValues]     = useState([5,0.3]);
+  const [helpOpen, setHelpOpen]             = useState(false);
   
   const { cyRef, containerRef } = useCytoscape();
   const { toasts, showToast, dismissToast } = useToast();
@@ -517,15 +517,21 @@ function App() {
         handleOpen();
       }
 
+      if (evt.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+        setHelpOpen(true);
+      }
+
       if (evt.key === 'Escape') {
         if (settingsOpen) setSettingsOpen(false);
         if (libraryOpen) setLibraryOpen(false);
+        if (randomizerOpen) setRandomizerOpen(false);
+        if (helpOpen) setHelpOpen(false);
       }
       
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleDelete, saveSnapshot, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen, libraryOpen, settingsOpen]);
+  }, [handleDelete, saveSnapshot, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen, libraryOpen, settingsOpen, randomizerOpen, helpOpen]);
 
   // Check backend health
   useEffect(() => {
@@ -540,6 +546,7 @@ function App() {
 
     const canvasEmpty = () => setCanvasEmpty(cy.nodes().length === 0);
     cy.on('add remove', canvasEmpty);
+    return () => cy.off('add remove', canvasEmpty)
   }, []);
 
   const {
@@ -578,7 +585,6 @@ function App() {
     setWorkspace([]);
     setSavedLeaps([]);
     setHopPalette([]);
-    nextNodeIdRef.current = 0;
   }, [cyRef, isDirty, indexBase, randomValues, nextNodeIdRef]);
 
   return (
@@ -603,6 +609,7 @@ function App() {
         randomValues={randomValues}
         setRandomValues={setRandomValues}
         onGenerate={handleRandom}
+        setHelpOpen={setHelpOpen}
         fileName={fileName}
         isDirty={isDirty}
       />
@@ -744,6 +751,11 @@ function App() {
         setIndexBase={setIndexBase}
         isDirected={isDirected}
         onToggleDirected={handleToggleDirected}
+      />
+    )}
+    {helpOpen && (
+      <HelpModal
+        onClose={() => setHelpOpen(false)}
       />
     )}
     </div>

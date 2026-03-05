@@ -6,26 +6,30 @@ function Randomizer({ randomValues, setRandomValues, onClose, onGenerate }) {
     const [n,p] = randomValues;
 
     return (
-        <div className="randomizer">Randomizer
+        <div className="randomizer">
+            <div className="randomizer-header">
+                <h4>Randomizer</h4>
+                <button onClick={onClose} className="modal-close">✕</button>
+            </div>
             <div className="randomizer-item">
-                <label className="randomizer-label">n =</label>
+                <label className="randomizer-label">Vertices</label>
                 <input
                     type="number"
                     min={1}
                     value={n}
-                    onChange={(e) => setRandomValues([e.target.value,p])}
+                    onChange={(e) => setRandomValues([Number(e.target.value),p])}
                     className="randomizer-input"
                 />
             </div>
             <div className="randomizer-item">
-                <label className="randomizer-label">p =</label>
+                <label className="randomizer-label">Density</label>
                 <input
                     type="number"
                     min={0}
                     max={1}
                     step={0.05}
                     value={p}
-                    onChange={(e) => setRandomValues([n,e.target.value])}
+                    onChange={(e) => setRandomValues([n,Number(e.target.value)])}
                     className="randomizer-input"
                 />
             </div>
@@ -36,13 +40,6 @@ function Randomizer({ randomValues, setRandomValues, onClose, onGenerate }) {
                     title="Generate"
                     >
                     Generate
-                </button>
-                <button
-                    onClick={onClose}
-                    className="toolbar-button randomizer-button"
-                    title="Close"
-                    >
-                    Close
                 </button>
             </div>
         </div>
