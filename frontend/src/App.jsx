@@ -45,9 +45,23 @@ function App() {
   const [randomizerOpen, setRandomizerOpen] = useState(false);
   const [randomValues, setRandomValues]     = useState([5,0.3]);
   const [helpOpen, setHelpOpen]             = useState(false);
-  
+
+    
   const { cyRef, containerRef } = useCytoscape();
   const { toasts, showToast, dismissToast } = useToast();
+
+  // Dark mode should default to the user's color scheme
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem('theme');
+    if (stored) return stored === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    document.body.classList.toggle('dark', darkMode);
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
 
   const {
     selectedHop, setSelectedHop,
@@ -610,6 +624,8 @@ function App() {
         setRandomValues={setRandomValues}
         onGenerate={handleRandom}
         setHelpOpen={setHelpOpen}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
         fileName={fileName}
         isDirty={isDirty}
       />

@@ -163,21 +163,18 @@ function MiniPreview({ graph }) {
                     const r = 8; // node radius
                     const tx2 = tx - (dx/len)*r, ty2 = ty - (dy/len)*r;
                     return (
-                        <line
+                        <line className='mini-preview-line'
                             key={i}
                             x1={sx} y1={sy}
                             x2={tx2} y2={ty2}
-                            stroke="#666"
-                            markerEnd="url(#arrowhead)"
                         />
                     );
                 }
                 return (
-                    <line
+                    <line className='mini-preview-line'
                         key={i}
                         x1={sx} y1={sy}
                         x2={tx} y2={ty}
-                        stroke="rgb(0, 0, 0)"
                     />
                 );
             })}
