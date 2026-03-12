@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import Randomizer from "./Randomizer";
 
 const SUN_SVG = (
@@ -23,19 +24,55 @@ function MenuBar({
     onGenerate,
     setHelpOpen,
     darkMode, setDarkMode,
+    sidebarOpen, setSidebarOpen,
     fileName, isDirty,
 }) {
+    const [menuOpen, setMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const handleClick = (e) => {
+            const dropdown = document.getElementById("fileops");
+            const hamburger = document.querySelector(".menu-bar-hamburger");
+            if (dropdown && !dropdown.contains(e.target) &&
+                hamburger && !hamburger.contains(e.target)) {
+                setMenuOpen(false);
+            }
+        }
+
+        window.addEventListener('click', handleClick);
+        return () => window.removeEventListener('click', handleClick);
+    }, [])
+
+
+
     return (
         <div className="menu-bar">
             <div className="menu-bar-left">
-                <span className="menu-bar-filename">
-                    {fileName ? fileName : 'Untitled.leap'}{isDirty ? ' •' : ''}
-                </span>
-                <button onClick={onNew}        className="menu-bar-button">New</button>
-                <button onClick={onOpen}       className="menu-bar-button">Open</button>
-                <button onClick={onSave}       className="menu-bar-button">Save</button>
-                <button onClick={onSaveAs}     className="menu-bar-button">Save as...</button>
-                <button onClick={onLibrary}    className="menu-bar-button">Library</button>
+                <button
+                    className="menu-bar-hamburger"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                >
+                    ☰
+                </button>
+
+                {/* File operations. Stored in dropdown on mobile.*/}
+                <div 
+                    id="fileops"
+                    className={`menu-bar-file-ops${menuOpen ? ' menu-open' : ''}`}
+                >
+                    <span className="menu-bar-filename">
+                        {fileName ? fileName : 'Untitled.leap'}{isDirty ? ' •' : ''}
+                    </span>
+                    <button onClick={onNew}        className="menu-bar-button">New</button>
+                    <button onClick={onOpen}       className="menu-bar-button">Open</button>
+                    <button onClick={onSave}       className="menu-bar-button">Save</button>
+                    <button onClick={onSaveAs}     className="menu-bar-button">Save as...</button>
+                </div>
+
+                {/* Always open */}
+                <button 
+                    onClick={onLibrary}    
+                    className="menu-bar-button">Library</button>
                 <button onClick={() => setRandomizerOpen(true)} className="menu-bar-button">Random graph....</button>
                 {randomizerOpen && (
                     <Randomizer
@@ -48,16 +85,20 @@ function MenuBar({
                 <button onClick={() => setHelpOpen(true)}     className="menu-bar-button">Help</button>
             </div>
             <div className="menu-bar-right">
-                <div>
-                    <button
-                        className="theme-button"
-                        onClick={() => darkMode ? setDarkMode(false) : setDarkMode(true)}
-                    >
-                        <div className="theme-icon">
-                            {darkMode ? SUN_SVG : MOON_SVG}
-                        </div>
-                    </button>
-                </div>
+                <button
+                    className="menu-bar-button sidebar-button"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                >
+                    ◀︎
+                </button>
+                <button
+                    className="theme-button"
+                    onClick={() => setDarkMode(!darkMode)}
+                >
+                    <div className="theme-icon">
+                        {darkMode ? SUN_SVG : MOON_SVG}
+                    </div>
+                </button>
             </div>
         </div>
     );

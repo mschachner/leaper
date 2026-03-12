@@ -45,6 +45,7 @@ function App() {
   const [randomizerOpen, setRandomizerOpen] = useState(false);
   const [randomValues, setRandomValues]     = useState([5,0.3]);
   const [helpOpen, setHelpOpen]             = useState(false);
+  const [sidebarOpen, setSidebarOpen]       = useState(false);
 
     
   const { cyRef, containerRef } = useCytoscape();
@@ -626,6 +627,8 @@ function App() {
         setHelpOpen={setHelpOpen}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
         fileName={fileName}
         isDirty={isDirty}
       />
@@ -681,6 +684,8 @@ function App() {
         <Sidebar 
           width={sidebarWidth}
           onWidthChange={setSidebarWidth}
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
         >
           <WorkingLeap
               labelPerm={labelPerm}

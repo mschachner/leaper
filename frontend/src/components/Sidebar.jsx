@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-function Sidebar({ children, width, onWidthChange }) {
+function Sidebar({ children, width, onWidthChange, sidebarOpen, setSidebarOpen }) {
   const isDragging = useRef(false);
 
   const onDragStart = useCallback((e) => {
@@ -25,12 +25,20 @@ function Sidebar({ children, width, onWidthChange }) {
   }, [onWidthChange]);
 
   return (
-    <div className="sidebar" style={{ width: `${width}px` }}>
+    <div 
+      className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`} 
+      style={{ width: `${width}px` }}>
       {/* Drag handle */}
       <div
-        onMouseDown={onDragStart}
         className="sidebar-drag-handle"
+        onMouseDown={onDragStart}
       />
+      <button
+        className='sidebar-close-button modal-close'
+        onClick={() => setSidebarOpen(false)}
+      >
+        ⨉
+      </button>
       {children}
     </div>
   );

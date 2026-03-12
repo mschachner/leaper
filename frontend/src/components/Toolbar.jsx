@@ -49,7 +49,7 @@ function Toolbar({
         <div className="settings-button">
           <button
             onClick={onOpenSettings}
-            className="toolbar-button"
+            className="toolbar-button settings-icon"
             title="Settings"
           >
             ⚙
