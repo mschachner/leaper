@@ -1,11 +1,6 @@
 r"""
 Utilities for calculating leap groups.
 
-EXAMPLES::
-
-    sage: from leaper.leaper import leap_group
-    sage: 
-
 """
 from sage.all import *
 from sage.graphs.all import graphs

@@ -1,0 +1,115 @@
+.working-leap {
+    padding: 12px var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-sidebar-secondary);
+  }
+  
+  .working-leap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  
+  .working-leap-title {
+    font-size: 16px;
+    color: var(--color-text-muted);
+  }
+  
+  .working-leap-actions {
+    display: flex;
+    gap: 6px;
+  }
+  
+  .working-leap-save {
+    background: none;
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--spacing-sm);
+    cursor: pointer;
+    font-size: 11px;
+  }
+  
+  .working-leap-reset {
+    background: none;
+    border: 1px solid #aaa;
+    color: var(--color-text-muted);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--spacing-sm);
+    cursor: pointer;
+    font-size: 11px;
+  }
+  
+  .working-leap-perm {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    padding: 6px var(--spacing-sm);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  .working-leap-count {
+    font-size: 12px;
+    color: #666;
+    margin-top: var(--spacing-xs);
+  }
+  
+  .working-leap-history {
+    margin-left: 6px;
+    font-family: var(--font-mono);
+  }
+  
+  .working-leap-empty {
+    font-size: 12px;
+    color: #aaa;
+    font-style: italic;
+  }
+  
+  .saved-leaps {
+    margin-top: var(--spacing-sm);
+  }
+  
+  .saved-leaps-title {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  .saved-leap-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: var(--radius-sm);
+    margin-bottom: 3px;
+    font-size: 12px;
+  }
+  
+  .saved-leap-name {
+    cursor: pointer;
+    color: var(--color-primary);
+    flex: 1;
+  }
+  
+  .saved-leap-cycle {
+    font-family: var(--font-mono);
+    color: var(--color-text-muted);
+    font-size: 11px;
+    margin-right: var(--spacing-sm);
+  }
+  
+  .saved-leap-delete {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 2px;
+  }

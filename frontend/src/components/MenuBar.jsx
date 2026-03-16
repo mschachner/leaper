@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import Randomizer from "./Randomizer";
 
+import './MenuBar.css';
+
 const SUN_SVG = (
     <svg fill="#ffffff" width="24px" height="24px" viewBox="0 0 36 36" version="1.1"  preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <title>sun-solid</title>

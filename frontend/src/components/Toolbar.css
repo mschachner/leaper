@@ -1,0 +1,25 @@
+.toolbar {
+    padding: var(--spacing-sm) 12px;
+    display: flex;
+    background: var(--color-bg-canvas);
+    background-image: url('../assets/canvas-texture.png');
+    background-repeat: repeat;
+    gap: var(--spacing-sm);
+    align-items: center;
+  }
+  
+.toolbar-spacer {
+    flex: 1;
+  }
+  
+.settings-button {
+    display: flex;
+    align-items: end;
+    height: 30px;
+    padding-bottom: 1px;
+  }
+  
+.settings-icon {
+    font-size: 20px;
+    padding: 0 5px;
+  }

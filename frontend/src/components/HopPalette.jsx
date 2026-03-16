@@ -1,5 +1,7 @@
 import { shiftCycleNotation } from '../lib/permUtils';
 
+import './HopPalette.css';
+
 function HopPalette({ hops, onHover, onUnhover, selectedHop, onRemove, onPerform, indexBase = 1, nodeCount = 0 }) {
   if (hops.length === 0) return null;
 

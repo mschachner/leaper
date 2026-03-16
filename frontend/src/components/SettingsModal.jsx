@@ -1,3 +1,5 @@
+import './SettingsModal.css';
+
 /**
  * Settings modal — extensible container for app-wide preferences.
  */
@@ -21,10 +23,10 @@ function SettingsModal({
 
   return (
     <div className="modal-overlay">
-      <div className="settings-modal">
+      <div className="modal settings-modal">
         {/* Header */}
-        <div className="settings-header">
-          <span className="settings-title">Settings</span>
+        <div className="modal-header">
+          <span className="modal-title">Settings</span>
           <button
             onClick={onClose}
             className="modal-close"
@@ -66,7 +68,7 @@ function SettingsModal({
                 <button
                   key={layout.value}
                   onClick={() => applyLayout(layout.value)}
-                  className="toolbar-button"
+                  className="btn"
                 >
                   {layout.label}
                 </button>

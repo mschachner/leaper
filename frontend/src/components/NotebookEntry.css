@@ -1,0 +1,141 @@
+.notebook-entry {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+
+.notebook-entry-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #bbb;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 var(--spacing-xs);
+  line-height: 1;
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  padding-right: 20px;
+}
+
+.entry-header-title {
+  color: var(--color-text);
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.entry-header-see-graph {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 11px;
+  margin-left: 6px;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.entry-header-meta {
+  font-size: 11px;
+  color: #aaa;
+}
+
+.entry-body-unknown {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.leap-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.leap-group-structure {
+  padding: 6px var(--spacing-sm);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.leap-group-order {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.hops-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.hops-body-count {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.hops-body-empty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.hops-body-toggle {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.hop-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: default;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.hop-item.selected {
+  background: #e8f0fe;
+  border-color: var(--color-primary);
+}
+
+.hop-item-cycle {
+  flex: 1;
+}
+
+.hop-item-perform {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 var(--spacing-xs);
+}
+
+.hop-item-pin {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 var(--spacing-xs);
+}

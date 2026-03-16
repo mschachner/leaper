@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { serializeGraph, deserializeGraph, validateGraphData } from './lib/graphFile';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { deserializeGraph } from './lib/graphFile';
 import { checkHealth } from './lib/api';
 import { makeRandom } from './lib/graphGenerators';
 
 import ControlPanel from './components/ControlPanel';
-import GraphLibraryModal from './components/graphLibraryModal';
+import GraphLibraryModal from './components/GraphLibraryModal';
 import NotebookEntry from './components/NotebookEntry';
 import WorkingLeap from './components/WorkingLeap';
-import DrawHopBar from './components/DrawHopBar';
 import HopPalette from './components/HopPalette';
 import Toast from './components/Toasts';
 import MenuBar from './components/MenuBar';
@@ -21,6 +20,7 @@ import useFileOperations from './hooks/useFileOperations';
 import useHopInteraction from './hooks/useHopInteraction';
 import useToast from './hooks/useToast';
 import useDrawHop from './hooks/useDrawHop';
+import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { clearFileHandle } from './lib/fileAccess';
 
 
@@ -66,8 +66,8 @@ function App() {
 
   const {
     selectedHop, setSelectedHop,
-    labelPerm, setLabelPerm,
-    hopHistory, setHopHistory,
+    labelPerm,
+    hopHistory,
     savedLeaps, setSavedLeaps,
     selectHop, performHop, resetLabels,
     saveWorkingLeap, recallWorkingLeap, deleteSavedLeap,
@@ -497,56 +497,49 @@ function App() {
     setIsDirty(true);
   }, []);
 
-  // Keyboard listeners
-  useEffect(() => {
-    const onKeyDown = (evt) => {
-      if (evt.key === 'Delete' || evt.key === 'Backspace') {
-        saveSnapshot();
-        handleDelete();
-      }
+  // Keyboard shortcuts
 
-      if ((evt.metaKey || evt.ctrlKey) && evt.key === 'z' && !evt.shiftKey) {
-        evt.preventDefault();
-        undo();
-        relabelNodes();
+  const shortcuts = useMemo(() => [
+    {
+      match: (e) => e.key === 'Delete' || e.key === 'Backspace',
+      action: () => { saveSnapshot(); handleDelete();}
+    },
+    {
+      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey,
+      action: (e) => { e.preventDefault(); undo(); relabelNodes();}
+    },
+    {
+      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey,
+      action: (e) => { e.preventDefault(); redo; relabelNodes(); }
+    },
+    {
+      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey,
+      action: (e) => { e.preventDefault(); handleSave(); }
+    },
+    {
+      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 's' && e.shiftKey,
+      action: (e) => { e.preventDefault(); handleSaveAs(); }
+    },
+    {
+      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 'o',
+      action: (e) => { e.preventDefault(); handleSaveAs(); }
+    },
+    {
+      match: (e) => e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName),
+      action: () => setHelpOpen(true)
+    },
+    {
+      match: (e) => e.key === 'Escape',
+      action: () => {
+        setHelpOpen(false);
+        setLibraryOpen(false);
+        setRandomizerOpen(false);
+        setSettingsOpen(false)
       }
+    },
+  ], [saveSnapshot, handleDelete, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen, settingsOpen, libraryOpen, randomizerOpen, helpOpen]);
 
-      if ((evt.metaKey || evt.ctrlKey) && evt.key === 'z' && evt.shiftKey) {
-        evt.preventDefault();
-        redo();
-        relabelNodes();
-      }
-
-      if ((evt.metaKey || evt.ctrlKey) && evt.key === 's' && !evt.shiftKey) {
-        evt.preventDefault();
-        handleSave();
-      }
-
-      if ((evt.metaKey || evt.ctrlKey) && evt.key === 's' && evt.shiftKey) {
-        evt.preventDefault();
-        handleSaveAs();
-      }
-
-      if ((evt.metaKey || evt.ctrlKey) && evt.key === 'o') {
-        evt.preventDefault();
-        handleOpen();
-      }
-
-      if (evt.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
-        setHelpOpen(true);
-      }
-
-      if (evt.key === 'Escape') {
-        if (settingsOpen) setSettingsOpen(false);
-        if (libraryOpen) setLibraryOpen(false);
-        if (randomizerOpen) setRandomizerOpen(false);
-        if (helpOpen) setHelpOpen(false);
-      }
-      
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleDelete, saveSnapshot, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen, libraryOpen, settingsOpen, randomizerOpen, helpOpen]);
+  useKeyboardShortcuts(shortcuts);
 
   // Check backend health
   useEffect(() => {

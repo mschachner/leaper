@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import './Sidebar.css';
+
 function Sidebar({ children, width, onWidthChange, sidebarOpen, setSidebarOpen }) {
   const isDragging = useRef(false);
 

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import graphLibrary from '../lib/graphLibrary';
 
+import './GraphLibraryModal.css';
+
 const TABS = [
     { label: 'All',        family: null },
     { label: 'Complete',   family: 'Complete' },
@@ -37,13 +39,13 @@ function GraphLibraryModal({ onLoad, onClose, isDirected }) {
 
     return (
         <div className="modal-overlay">
-            <div className="library-modal">
+            <div className="modal library-modal">
                 {/* Header */}
-                <div className="library-header">
-                    <h2 className="library-title">Graph Library</h2>
+                <div className="modal-header">
+                    <h2 className="modal-title">Graph Library</h2>
                     <button
                         onClick={onClose}
-                        className="library-close"
+                        className="modal-close"
                     >×</button>
                 </div>
 

@@ -1,3 +1,5 @@
+import './Randomizer.css';
+
 /**
  * Randomizer: popover for generating a random graph.
  */
@@ -36,7 +38,7 @@ function Randomizer({ randomValues, setRandomValues, onClose, onGenerate }) {
             <div className="randomizer-buttons">
                 <button
                     onClick={onGenerate}
-                    className="toolbar-button randomizer-button"
+                    className="btn randomizer-button"
                     title="Generate"
                     >
                     Generate

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { shiftCycleNotation } from '../lib/permUtils';
 
+import './NotebookEntry.css';
+
 function NotebookEntry({ entry, onRemove, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onViewSnapshot, onPinHop, indexBase = 1 }) {
     return (
         <div className="notebook-entry">

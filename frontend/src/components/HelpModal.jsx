@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 
+import './HelpModal.css';
+
 const SECTIONS = [
     {
         id: "hops-and-leaps",
@@ -55,8 +57,8 @@ function HelpModal({ onClose }) {
 
     return (
         <div className="modal-overlay">
-            <div className="help-modal">
-                <div className="help-header">
+            <div className="modal help-modal">
+                <div className="modal-header">
                     <h2>Help</h2>
                     <button onClick={onClose} className="modal-close">✕</button>
                 </div>

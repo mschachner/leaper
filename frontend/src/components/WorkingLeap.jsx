@@ -1,5 +1,7 @@
 import { toCycleNotation, shiftCycleNotation } from "../lib/permUtils";
 
+import './WorkingLeap.css';
+
 /**
  * Displays the current working leap; the composed permutation in cycle notation, the number of hops composed, and the composition history.
  * Also provides Reset and Save buttons.

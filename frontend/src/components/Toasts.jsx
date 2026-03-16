@@ -1,3 +1,5 @@
+import './Toasts.css';
+
 function Toast({ toasts, onDismiss }) {
     if (toasts.length === 0) return null;
 

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createEntry } from '../lib/workspace';
 import { API_URL } from '../lib/api';
 
+import './ControlPanel.css';
+
 function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);

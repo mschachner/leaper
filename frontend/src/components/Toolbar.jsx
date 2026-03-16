@@ -1,5 +1,7 @@
 import DrawHopBar from "./DrawHopBar";
 
+import './Toolbar.css';
+
 function Toolbar({
     mode, onSetMode, onDelete,
     drawingHop, setDrawingHop, 
@@ -11,13 +13,13 @@ function Toolbar({
 }) {
     return (
       <div className="toolbar">
-        <button className={`toolbar-button${mode === 'pan' ? ' active' : ''}`} onClick={() => { onSetMode('pan'); setEdgeSource(null); }}>Pan</button>
-        <button className={`toolbar-button${mode === 'select' ? ' active' : ''}`} onClick={() => { onSetMode('select'); setEdgeSource(null); }}>Select</button>
-        <button className={`toolbar-button${mode === 'addVertex' ? ' active' : ''}`} onClick={() => onSetMode('addVertex')}>Vertex</button>
-        <button className={`toolbar-button${mode === 'addEdge' ? ' active' : ''}`} onClick={() => onSetMode('addEdge')}>Edge</button>
-        <button className={`toolbar-button${mode === 'delete' ? ' active' : ''}`} onClick={onDelete}>Delete</button>
+        <button className={`btn${mode === 'pan' ? ' active' : ''}`} onClick={() => { onSetMode('pan'); setEdgeSource(null); }}>Pan</button>
+        <button className={`btn${mode === 'select' ? ' active' : ''}`} onClick={() => { onSetMode('select'); setEdgeSource(null); }}>Select</button>
+        <button className={`btn${mode === 'addVertex' ? ' active' : ''}`} onClick={() => onSetMode('addVertex')}>Vertex</button>
+        <button className={`btn${mode === 'addEdge' ? ' active' : ''}`} onClick={() => onSetMode('addEdge')}>Edge</button>
+        <button className={`btn${mode === 'delete' ? ' active' : ''}`} onClick={onDelete}>Delete</button>
         <button
-          className={`toolbar-button${mode === 'drawHop' ? ' active' : ''}`}
+          className={`btn${mode === 'drawHop' ? ' active' : ''}`}
           onClick={() => {
             onSetMode('drawHop');
             setEdgeSource(null);
@@ -49,7 +51,7 @@ function Toolbar({
         <div className="settings-button">
           <button
             onClick={onOpenSettings}
-            className="toolbar-button settings-icon"
+            className="btn settings-icon"
             title="Settings"
           >
             ⚙

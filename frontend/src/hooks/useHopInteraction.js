@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { toCycleNotation } from '../lib/permUtils';
 
 export default function useHopInteraction({ cyRef, showLabels, indexBase = 1, isDirected = false }) {
     const [selectedHop, setSelectedHop] = useState(null);

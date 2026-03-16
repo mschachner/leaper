@@ -1,3 +1,5 @@
+import './DrawHopBar.css';
+
 function DrawHopBar({ drawingHop, nodeCount, onVerifyAndSave, onPerform, onCancel, onUndo}) {
     const assignedCount = Object.keys(drawingHop.assignments).length;
     const isComplete = assignedCount === nodeCount && nodeCount > 0;
@@ -37,7 +39,7 @@ function DrawHopBar({ drawingHop, nodeCount, onVerifyAndSave, onPerform, onCance
             )}
             <button
                 onClick={onCancel}
-                className="toolbar-button">
+                className="btn">
                 Cancel
             </button>
         </div>
