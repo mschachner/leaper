@@ -13,10 +13,48 @@
 export function normalizeGroup(s) {
   return s
     .toLowerCase()
+    .replace(/≀/g, 'wr')
     .replace(/[×✕⨯*]/g, 'x')
     .replace(/[⋊⋉]/g, ':')
     .replace(/z(?=\d)/g, 'c')     // Zn -> Cn
     .replace(/[\s_().]/g, '');
+}
+
+/**
+ * Friendlier names for GAP StructureDescription strings. GAP's convention
+ * puts normal subgroups first, which renders e.g. S4 ≀ C2 as
+ * "(C2 x C2 x C2 x C2) : ((S3 x S3) : C2)". Each identification below was
+ * verified against the actual leap groups in the database via GAP IdGroup
+ * (StructureDescription strings are not injective, so this matters):
+ * every occurrence of each string is the single indicated isomorphism type.
+ */
+export const GROUP_DISPLAY = {
+  '(C2 x C2 x C2 x C2) : C2': '(C2 x C2) ≀ C2',        // IdGroup [32,27]
+  '(C4 x C4) : C2': 'C4 ≀ C2',                          // IdGroup [32,11]
+  '(S3 x S3) : C2': 'S3 ≀ C2',                          // IdGroup [72,40]
+  '(C2 x C2 x C2 x C2) : (C3 x S3)': 'A4 ≀ C2',         // IdGroup [288,1025]
+  '(C2 x C2 x C2 x C2) : ((S3 x S3) : C2)': 'S4 ≀ C2',  // IdGroup [1152,157849]
+  'GL(2,4)': 'C3 x A5',                                 // IdGroup [180,19]
+};
+
+// Search-only aliases for groups whose standard name stays dominant.
+const GROUP_SEARCH_ALIASES = {
+  'D8': ['C2 ≀ C2', 'dihedral'],   // IdGroup [8,3]
+  'C3 x S3': ['C3 ≀ C2'],          // IdGroup [18,3]
+};
+
+/** The display name for a GAP structure description. */
+export function displayGroup(s) {
+  return GROUP_DISPLAY[s] || s;
+}
+
+function groupSearchBlob(s) {
+  const parts = [normalizeGroup(s)];
+  if (GROUP_DISPLAY[s]) parts.push(normalizeGroup(GROUP_DISPLAY[s]));
+  for (const a of GROUP_SEARCH_ALIASES[s] || []) {
+    parts.push(normalizeGroup(a));
+  }
+  return parts.join(' ');
 }
 
 /**
@@ -60,8 +98,8 @@ export function prepEntry(e) {
     ...e,
     _name: [normalizeName(e.name), ...e.aliases.map(normalizeName),
             e.id.toLowerCase()].join(' '),
-    _l1: normalizeGroup(e.l1),
-    _l2: normalizeGroup(e.l2),
+    _l1: groupSearchBlob(e.l1),
+    _l2: groupSearchBlob(e.l2),
   };
 }
 

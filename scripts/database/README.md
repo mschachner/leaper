@@ -62,6 +62,17 @@ computations (including K8 → S8 with D(8) = 14,833 hops and
 classification), Theorem 3.14 (disjoint-union orders, checked on all 1,216
 two-component graphs), and the leap-redundancy invariants.
 
+## Group display names
+
+The frontend (`frontend/src/lib/leapDatabase.js`, `GROUP_DISPLAY`) renders
+friendlier names for GAP's clunkier `StructureDescription` strings — e.g.
+`(C2 x C2 x C2 x C2) : ((S3 x S3) : C2)` displays as `S4 ≀ C2`. Since
+`StructureDescription` is not injective (non-isomorphic groups can share a
+string), each identification was verified with GAP `IdGroup` against every
+occurrence (or a sample plus a structural argument, for the order-1152
+class) in the database. If the corpus changes, re-verify before trusting
+the aliases.
+
 ## Beyond n = 8
 
 n = 9 has 274,668 graphs (~40× the data) and K9 has 133,496 hops; static

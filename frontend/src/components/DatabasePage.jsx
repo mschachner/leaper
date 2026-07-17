@@ -3,6 +3,7 @@ import {
   DEFAULT_FILTERS,
   MAX_N,
   SORTS,
+  displayGroup,
   prepEntry,
   searchDatabase,
 } from '../lib/leapDatabase';
@@ -155,6 +156,7 @@ function DatabasePage() {
           {allGroups.map(({ name, order }) => {
             const count = groupCounts.get(name) || 0;
             const active = groupSel === name;
+            const pretty = displayGroup(name);
             return (
               <button
                 key={name}
@@ -164,10 +166,11 @@ function DatabasePage() {
                   (count === 0 ? ' unavailable' : '')
                 }
                 disabled={count === 0 && !active}
-                title={`Λ₁ ≅ ${name}, order ${order}`}
+                title={`Λ₁ ≅ ${pretty}, order ${order}`
+                  + (pretty !== name ? ` (GAP: ${name})` : '')}
                 onClick={() => setGroupSel(active ? null : name)}
               >
-                {name === '1' ? 'trivial' : name}
+                {name === '1' ? 'trivial' : pretty}
                 {count > 0 && <span className="db-group-pill-count">{count}</span>}
               </button>
             );
@@ -311,7 +314,7 @@ function EntryCard({ entry, onClick }) {
         {entry.hasHop ? (
           <>
             <span className="db-badge db-badge-group" title="Leap group Λ₁">
-              Λ₁ ≅ {entry.l1}
+              Λ₁ ≅ {displayGroup(entry.l1)}
             </span>
             <span className="db-badge" title="Number of hops">
               {entry.hopCount} hop{entry.hopCount === 1 ? '' : 's'}
@@ -330,10 +333,24 @@ function yn(v) {
   return v ? 'yes' : 'no';
 }
 
+function GroupValue({ desc, order }) {
+  const pretty = displayGroup(desc);
+  return (
+    <>
+      {pretty}&ensp;(order {order})
+      {pretty !== desc && <div className="db-detail-gap">GAP: {desc}</div>}
+    </>
+  );
+}
+
 function DetailModal({ entry, onClose }) {
   const rows = [
-    ['Leap group Λ₁', entry.hasHop ? `${entry.l1}  (order ${entry.l1Order})` : 'trivial (no hop)'],
-    ['Second leap group Λ₂', entry.hasHop ? `${entry.l2}  (order ${entry.l2Order})` : 'trivial'],
+    ['Leap group Λ₁', entry.hasHop
+      ? <GroupValue desc={entry.l1} order={entry.l1Order} />
+      : 'trivial (no hop)'],
+    ['Second leap group Λ₂', entry.hasHop
+      ? <GroupValue desc={entry.l2} order={entry.l2Order} />
+      : 'trivial'],
     ['Hops', String(entry.hopCount)],
     ['Reclusive', entry.hasHop ? yn(entry.reclusive) : '— (no hop)'],
     ['Leap-connected', yn(entry.leapConnected)],

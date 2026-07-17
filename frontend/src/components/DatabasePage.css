@@ -329,6 +329,12 @@
   width: 45%;
 }
 
+.db-detail-gap {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
 .db-detail-value {
   font-family: var(--font-mono);
   color: var(--color-text);
