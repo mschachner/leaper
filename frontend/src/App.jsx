@@ -10,6 +10,7 @@ import WorkingLeap from './components/WorkingLeap';
 import HopPalette from './components/HopPalette';
 import Toast from './components/Toasts';
 import MenuBar from './components/MenuBar';
+import DatabasePage from './components/DatabasePage';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import SettingsModal from './components/SettingsModal';
@@ -46,6 +47,7 @@ function App() {
   const [randomValues, setRandomValues]     = useState([5,0.3]);
   const [helpOpen, setHelpOpen]             = useState(false);
   const [sidebarOpen, setSidebarOpen]       = useState(false);
+  const [page, setPage]                     = useState('editor');
 
     
   const { cyRef, containerRef } = useCytoscape();
@@ -624,11 +626,17 @@ function App() {
         setSidebarOpen={setSidebarOpen}
         fileName={fileName}
         isDirty={isDirty}
+        page={page}
+        setPage={setPage}
       />
+
+      {/* Database page (editor stays mounted underneath so the graph,
+          workspace, and cytoscape state survive page switches) */}
+      {page === 'database' && <DatabasePage />}
 
       {/* Main area: canvas + sidebar */}
 
-      <div className="mainArea">
+      <div className="mainArea" style={page === 'database' ? { display: 'none' } : undefined}>
 
         {/* Canvas column: toolbar + banner + graph */}
         <div className="canvasColumn">

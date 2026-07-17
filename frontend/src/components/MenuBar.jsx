@@ -28,6 +28,7 @@ function MenuBar({
     darkMode, setDarkMode,
     sidebarOpen, setSidebarOpen,
     fileName, isDirty,
+    page, setPage,
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -47,18 +48,43 @@ function MenuBar({
 
 
 
+    const onEditor = page !== 'database';
+
     return (
         <div className="menu-bar">
             <div className="menu-bar-left">
-                <button
-                    className="menu-bar-hamburger"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                >
-                    ☰
-                </button>
+                {/* Top-level app tabs */}
+                <div className="app-tabs" role="tablist">
+                    <button
+                        role="tab"
+                        aria-selected={onEditor}
+                        className={`app-tab${onEditor ? ' active' : ''}`}
+                        onClick={() => setPage('editor')}
+                    >
+                        Editor
+                    </button>
+                    <button
+                        role="tab"
+                        aria-selected={!onEditor}
+                        className={`app-tab${!onEditor ? ' active' : ''}`}
+                        onClick={() => setPage('database')}
+                    >
+                        Database
+                    </button>
+                </div>
+
+                {onEditor && (
+                    <button
+                        className="menu-bar-hamburger"
+                        onClick={() => setMenuOpen(!menuOpen)}
+                    >
+                        ☰
+                    </button>
+                )}
 
                 {/* File operations. Stored in dropdown on mobile.*/}
-                <div 
+                {onEditor && (
+                <div
                     id="fileops"
                     className={`menu-bar-file-ops${menuOpen ? ' menu-open' : ''}`}
                 >
@@ -70,10 +96,12 @@ function MenuBar({
                     <button onClick={onSave}       className="menu-bar-button">Save</button>
                     <button onClick={onSaveAs}     className="menu-bar-button">Save as...</button>
                 </div>
+                )}
 
                 {/* Always open */}
-                <button 
-                    onClick={onLibrary}    
+                {onEditor && (<>
+                <button
+                    onClick={onLibrary}
                     className="menu-bar-button">Library</button>
                 <button onClick={() => setRandomizerOpen(true)} className="menu-bar-button">Random graph....</button>
                 {randomizerOpen && (
@@ -84,15 +112,18 @@ function MenuBar({
                     onGenerate={onGenerate}
                 />
                 )}
+                </>)}
                 <button onClick={() => setHelpOpen(true)}     className="menu-bar-button">Help</button>
             </div>
             <div className="menu-bar-right">
+                {onEditor && (
                 <button
                     className="menu-bar-button sidebar-button"
                     onClick={() => setSidebarOpen(!sidebarOpen)}
                 >
                     ◀︎
                 </button>
+                )}
                 <button
                     className="theme-button"
                     onClick={() => setDarkMode(!darkMode)}

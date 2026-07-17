@@ -20,6 +20,7 @@ Leaper is a React app built for exploring these and many related questions. Draw
 - **Persistent workspace**. Remembers every computation you make and the graphs they were computed on.
 - **Graph library**. A library of famous and important graphs to explore hops and leaps on.
 - **Interactive hop/leap explorer**. Draw hops and find leaps on your graph without doing the full, lengthy computations.
+- **Leap group database**. Every simple graph on up to 8 vertices (13,598 graphs) with precomputed leap groups, searchable by graph name, group structure, or properties like reclusiveness and leap-connectivity. See `scripts/database/` for how it's generated.
 
 ## Setup / Installation
 [Try it here!](https://mark-schachner.com/leaper)
