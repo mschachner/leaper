@@ -47,20 +47,52 @@ def grid(rows, cols):
     return edges
 
 
-def children():
-    """PIDs of this process's live (non-zombie) children."""
-    me = str(os.getpid())
+@pytest.fixture(scope="module", autouse=True)
+def forked():
+    """
+    The PIDs of every computation the backend forks during this module.
+
+    Leak checks go by these, and not by "this process has no children": a
+    full Sage installation keeps a helper process of its own alive, which is
+    none of the backend's business.
+    """
+    pids = []
+    real_fork = os.fork
+
+    def fork():
+        pid = real_fork()
+        if pid:
+            pids.append(pid)
+        return pid
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(os, "fork", fork)
+        yield pids
+    assert running(pids) == [], "a computation outlived the test module"
+
+
+def running(pids):
+    """Those of ``pids`` that are still live (non-zombie) processes, with their command lines."""
     found = []
-    for pid in os.listdir("/proc"):
-        if pid.isdigit():
-            try:
-                with open(f"/proc/{pid}/stat") as f:
-                    fields = f.read().rsplit(")", 1)[1].split()
-            except OSError:
-                continue
-            if fields[1] == me and fields[0] != "Z":
-                found.append(int(pid))
+    for pid in pids:
+        try:
+            with open(f"/proc/{pid}/stat") as f:
+                state = f.read().rsplit(")", 1)[1].split()[0]
+            with open(f"/proc/{pid}/cmdline") as f:
+                command = f.read().replace("\0", " ").strip()
+        except OSError:
+            continue
+        if state != "Z":
+            found.append((pid, command))
     return found
+
+
+def settled(pids, expected=0):
+    """Wait briefly for the number of running computations to reach ``expected``."""
+    deadline = time.monotonic() + 2
+    while len(running(pids)) != expected and time.monotonic() < deadline:
+        time.sleep(0.05)
+    return running(pids)
 
 
 # --- results
@@ -167,18 +199,19 @@ def spin_forever(*args, **kwargs):
         pass
 
 
-def test_timeout_kills_the_computation(client, monkeypatch):
+def test_timeout_kills_the_computation(client, monkeypatch, forked):
     monkeypatch.setattr(backend, "LEAPER_TIMEOUT_SECONDS", 1.5)
     monkeypatch.setattr(backend, "leap_group_from_adjacency", spin_forever)
+    before = len(forked)
     started = time.monotonic()
     r = client.post("/leap-group", json=graph(4, cycle(4)))
     assert r.status_code == 504
     assert 1.4 < time.monotonic() - started < 4
-    time.sleep(0.2)
-    assert children() == []
+    assert len(forked) == before + 1
+    assert settled(forked) == []
 
 
-def test_structure_description_is_time_boxed(client, monkeypatch):
+def test_structure_description_is_time_boxed(client, monkeypatch, forked):
     # GAP's StructureDescription takes minutes on this group (order 2 * 8!^2)
     # when it is not recognized; the order must still come back.
     monkeypatch.setattr(backend, "LEAPER_STRUCTURE_SECONDS", 1)
@@ -188,36 +221,40 @@ def test_structure_description_is_time_boxed(client, monkeypatch):
     assert r.status_code == 200
     assert r.json() == {"structure": None, "order": 3251404800, "order_str": "3251404800"}
     assert time.monotonic() - started < 5
-    time.sleep(0.2)
-    assert children() == []
+    assert settled(forked) == []
 
 
-def test_crashed_computation_is_reported(client, monkeypatch):
+def test_crashed_computation_is_reported(client, monkeypatch, forked):
     monkeypatch.setattr(backend, "leap_group_from_adjacency",
                         lambda *args, **kwargs: os._exit(3))
     r = client.post("/leap-group", json=graph(4, cycle(4)))
     assert r.status_code == 500
-    assert children() == []
+    assert settled(forked) == []
 
 
-def test_busy_server_turns_requests_away(client, monkeypatch):
+def test_busy_server_turns_requests_away(client, monkeypatch, forked):
     import threading
     monkeypatch.setattr(backend, "LEAPER_TIMEOUT_SECONDS", 3)
     monkeypatch.setattr(backend, "QUEUE_WAIT_SECONDS", 0.5)
     monkeypatch.setattr(backend, "leap_group_from_adjacency", spin_forever)
+    slots = backend.LEAPER_MAX_CONCURRENT
     codes = []
     def post():
         codes.append(client.post("/leap-group", json=graph(4, cycle(4))).status_code)
-    threads = [threading.Thread(target=post) for _ in range(backend.LEAPER_MAX_CONCURRENT + 1)]
-    for t in threads:
-        t.start()
-        time.sleep(0.1)
-    time.sleep(0.3)
-    assert len(children()) == backend.LEAPER_MAX_CONCURRENT
-    for t in threads:
-        t.join()
-    assert sorted(codes) == [503] + [504] * backend.LEAPER_MAX_CONCURRENT
-    assert children() == []
+    threads = [threading.Thread(target=post) for _ in range(slots + 1)]
+    try:
+        for t in threads:
+            t.start()
+            time.sleep(0.1)
+        at_once = len(settled(forked, expected=slots))
+    finally:
+        # Always wait for the requests, so a failure here cannot leak
+        # computations (and their log lines) into the next test.
+        for t in threads:
+            t.join()
+    assert at_once == slots
+    assert sorted(codes) == [503] + [504] * slots
+    assert settled(forked) == []
 
 
 # --- logging

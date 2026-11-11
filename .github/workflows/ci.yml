@@ -60,6 +60,10 @@ jobs:
       - name: Build the image Railway deploys
         run: docker build -f backend/Dockerfile -t leaper-backend .
       - name: Run all Python tests inside it
+        # The image's entrypoint runs its arguments as one shell command
+        # (sage -sh -c "$*"), so the command is passed as a single string;
+        # wrapping it in `bash -c "..."` gets flattened and starts a Sage
+        # prompt instead.
         run: |
           docker run --rm --user root -v "$PWD":/repo -w /repo leaper-backend \
-            bash -c "sage -pip install --no-cache-dir pytest httpx && sage -python -m pytest"
+            "sage -pip install --no-cache-dir pytest httpx && sage -python -m pytest"
