@@ -5,4 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/leaper/',
+  test: {
+    // Unit tests (vitest). The browser tests in e2e/ run under Playwright.
+    include: ['tests/**/*.test.js'],
+  },
 })

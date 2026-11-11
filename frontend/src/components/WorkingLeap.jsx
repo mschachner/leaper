@@ -1,4 +1,4 @@
-import { toCycleNotation, shiftCycleNotation } from "../lib/permUtils";
+import { toCycleNotation, shiftCycleNotation, leapFromLabels } from "../lib/permUtils";
 
 import './WorkingLeap.css';
 
@@ -18,7 +18,9 @@ function WorkingLeap({
     indexBase = 1,
 }) {
     // Convert to cycle notation
-    const cycleStr = labelPerm ? toCycleNotation(labelPerm, indexBase) : '()';
+    // labelPerm records which label sits on each vertex; the leap is its inverse.
+    const leapCycles = (labels) => toCycleNotation(leapFromLabels(labels), indexBase);
+    const cycleStr = labelPerm ? leapCycles(labelPerm) : '()';
     const hopCount = hopHistory.length;
 
     return (
@@ -85,14 +87,12 @@ function WorkingLeap({
                             <span
                                 onClick={() => onRecall(saved)}
                                 className="saved-leap-name"
-                                title={
-                                    `Recall: ${toCycleNotation(saved.permutation, indexBase)}`
-                                }
+                                title={`Recall: ${leapCycles(saved.permutation)}`}
                             >
                                 {saved.name}
                             </span>
                             <span className="saved-leap-cycle">
-                                {toCycleNotation(saved.permutation, indexBase)}
+                                {leapCycles(saved.permutation)}
                             </span>
                             <button
                                 onClick={() => onDelete(i)}

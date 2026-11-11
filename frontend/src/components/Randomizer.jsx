@@ -4,6 +4,11 @@ import './Randomizer.css';
  * Randomizer: popover for generating a random graph.
  */
 
+// The server's limit on graph size (LEAPER_MAX_VERTICES).
+const MAX_VERTICES = 100;
+
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+
 function Randomizer({ randomValues, setRandomValues, onClose, onGenerate }) {
     const [n,p] = randomValues;
 
@@ -18,8 +23,9 @@ function Randomizer({ randomValues, setRandomValues, onClose, onGenerate }) {
                 <input
                     type="number"
                     min={1}
+                    max={MAX_VERTICES}
                     value={n}
-                    onChange={(e) => setRandomValues([Number(e.target.value),p])}
+                    onChange={(e) => setRandomValues([clamp(Math.round(Number(e.target.value)) || 1, 1, MAX_VERTICES), p])}
                     className="randomizer-input"
                 />
             </div>
@@ -31,7 +37,7 @@ function Randomizer({ randomValues, setRandomValues, onClose, onGenerate }) {
                     max={1}
                     step={0.05}
                     value={p}
-                    onChange={(e) => setRandomValues([n,Number(e.target.value)])}
+                    onChange={(e) => setRandomValues([n, clamp(Number(e.target.value) || 0, 0, 1)])}
                     className="randomizer-input"
                 />
             </div>

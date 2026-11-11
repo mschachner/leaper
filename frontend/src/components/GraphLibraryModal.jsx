@@ -38,8 +38,8 @@ function GraphLibraryModal({ onLoad, onClose, isDirected }) {
         : tabFiltered;
 
     return (
-        <div className="modal-overlay">
-            <div className="modal library-modal">
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal library-modal" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="modal-header">
                     <h2 className="modal-title">Graph Library</h2>

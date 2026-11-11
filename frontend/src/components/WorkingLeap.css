@@ -33,7 +33,7 @@
   
   .working-leap-reset {
     background: none;
-    border: 1px solid #aaa;
+    border: 1px solid var(--color-border);
     color: var(--color-text-muted);
     border-radius: var(--radius-sm);
     padding: 2px var(--spacing-sm);
@@ -54,7 +54,7 @@
   
   .working-leap-count {
     font-size: 12px;
-    color: #666;
+    color: var(--color-text-muted);
     margin-top: var(--spacing-xs);
   }
   
@@ -65,7 +65,7 @@
   
   .working-leap-empty {
     font-size: 12px;
-    color: #aaa;
+    color: var(--color-text-faint);
     font-style: italic;
   }
   
@@ -85,8 +85,8 @@
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-xs) var(--spacing-sm);
-    background: #fff;
-    border: 1px solid #e0e0e0;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     margin-bottom: 3px;
     font-size: 12px;
@@ -108,7 +108,7 @@
   .saved-leap-delete {
     background: none;
     border: none;
-    color: #ccc;
+    color: var(--color-text-faint);
     cursor: pointer;
     font-size: 12px;
     padding: 0 2px;

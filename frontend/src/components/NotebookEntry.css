@@ -10,7 +10,7 @@
   right: 8px;
   background: none;
   border: none;
-  color: #bbb;
+  color: var(--color-text-faint);
   cursor: pointer;
   font-size: 14px;
   padding: 0 var(--spacing-xs);
@@ -44,7 +44,7 @@
 
 .entry-header-meta {
   font-size: 11px;
-  color: #aaa;
+  color: var(--color-text-faint);
 }
 
 .entry-body-unknown {
@@ -68,9 +68,23 @@
   color: var(--color-text);
 }
 
+.leap-group-structure-missing {
+  font-family: var(--font-sans);
+  font-style: italic;
+  color: var(--color-text-faint);
+  border-style: dashed;
+}
+
 .leap-group-order {
   font-size: 12px;
   color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* An abbreviated order carries its exact digits in a tooltip. */
+.leap-group-order span[title] {
+  cursor: help;
+  border-bottom: 1px dotted var(--color-text-faint);
 }
 
 .hops-body {
@@ -90,6 +104,11 @@
   font-style: italic;
 }
 
+.hops-body-toggle:hover,
+.hop-item:hover {
+  border-color: var(--color-primary);
+}
+
 .hops-body-toggle {
   background: none;
   border: 1px solid var(--color-border);
@@ -104,8 +123,8 @@
   display: flex;
   align-items: center;
   padding: var(--spacing-xs) var(--spacing-sm);
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 13px;
@@ -114,7 +133,7 @@
 }
 
 .hop-item.selected {
-  background: #e8f0fe;
+  background: var(--color-bg-surface-hover);
   border-color: var(--color-primary);
 }
 
@@ -134,7 +153,7 @@
 .hop-item-pin {
   background: none;
   border: none;
-  color: #aaa;
+  color: var(--color-text-faint);
   cursor: pointer;
   font-size: 11px;
   padding: 0 var(--spacing-xs);

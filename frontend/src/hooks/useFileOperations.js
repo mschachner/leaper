@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { serializeGraph, deserializeGraph, validateGraphData } from '../lib/graphFile';
-import { saveAs, save, openFile, clearFileHandle } from '../lib/fileAccess';
+import { saveAs, save, openFile, clearFileHandle, isPickerCancel } from '../lib/fileAccess';
+import { relabelVertices } from '../lib/cyGraph';
 
 export default function useFileOperations({
     cyRef,
@@ -15,27 +16,24 @@ export default function useFileOperations({
     setLibraryOpen,
     nextNodeIdRef,
 }) {
-    const handleSave = useCallback(async () => {
+    const writeFile = useCallback(async (write) => {
         const cy = cyRef.current;
         if (!cy) return;
-    
-        const graphData = serializeGraph(cy, fileName || 'Untitled', { showLabels, indexBase, directed: isDirected }, workspace, savedLeaps, hopPalette);
-        const json = JSON.stringify(graphData, null, 2);
-        const name = await save(json);
-        setFileName(name);
-        setIsDirty(false);
-    }, [cyRef, fileName, showLabels, indexBase, isDirected, workspace, savedLeaps, hopPalette, setFileName, setIsDirty])
 
-    const handleSaveAs = useCallback(async () => {
-        const cy = cyRef.current;
-        if (!cy) return;
-    
         const graphData = serializeGraph(cy, fileName || 'Untitled', { showLabels, indexBase, directed: isDirected }, workspace, savedLeaps, hopPalette);
         const json = JSON.stringify(graphData, null, 2);
-        const name = await saveAs(json);
-        setFileName(name);
-        setIsDirty(false);
-    }, [cyRef, fileName, showLabels, indexBase, isDirected, workspace, savedLeaps, hopPalette, setFileName, setIsDirty])
+        try {
+            const name = await write(json);
+            setFileName(name);
+            setIsDirty(false);
+        } catch (err) {
+            // Closing the file picker is not an error.
+            if (!isPickerCancel(err)) alert(`Couldn't save: ${err.message}`);
+        }
+    }, [cyRef, fileName, showLabels, indexBase, isDirected, workspace, savedLeaps, hopPalette, setFileName, setIsDirty]);
+
+    const handleSave = useCallback(() => writeFile(save), [writeFile]);
+    const handleSaveAs = useCallback(() => writeFile(saveAs), [writeFile]);
 
     const handleOpen = useCallback(async () => {
         const confirmMsg = 'You have unsaved changes. Open a different graph anyway?';
@@ -44,18 +42,27 @@ export default function useFileOperations({
         }
         const cy = cyRef.current;
         if (!cy) return;
-    
-        const { data, name } = await openFile();
-    
+
+        let data, name;
+        try {
+            ({ data, name } = await openFile());
+        } catch (err) {
+            // Closing the file picker is not an error.
+            if (!isPickerCancel(err)) alert(`Couldn't open the file: ${err.message}`);
+            return;
+        }
+
         const error = validateGraphData(data);
         if (error) {
             alert(`Couldn't load ${name}: ${error}`);
             return;
         }
-    
+
         const loadedIndexBase = data.settings?.indexBase ?? 1;
         const loadedDirected = data.settings?.directed ?? false;
         deserializeGraph(cy, data, loadedIndexBase, loadedDirected);
+        // Files written by hand may number their vertices any way they like.
+        nextNodeIdRef.current = relabelVertices(cy, loadedIndexBase, loadedDirected);
         if (data.settings?.showLabels !== undefined) {
             setShowLabels(data.settings.showLabels);
         }
@@ -66,9 +73,7 @@ export default function useFileOperations({
         setWorkspace(data.workspace || []);
         setSavedLeaps(data.savedLeaps || []);
         setHopPalette(data.hopPalette || []);
-        const maxId = Math.max(-1, ...data.vertices.map((v) => v.id));
-        nextNodeIdRef.current = maxId + 1;
-    
+
         setFileName(name);
         setIsDirty(false);
     }, [cyRef, isDirty, setShowLabels, setIndexBase, setIsDirected, setWorkspace, setSavedLeaps, setHopPalette, setFileName, setIsDirty, nextNodeIdRef]);
@@ -110,7 +115,7 @@ export default function useFileOperations({
         setWorkspace([]);
         setSavedLeaps([]);
         setHopPalette([]);
-    }, [cyRef, isDirty, indexBase, setFileName, setIsDirty, setLibraryOpen, setWorkspace, setSavedLeaps, setHopPalette, nextNodeIdRef]);
+    }, [cyRef, isDirty, indexBase, isDirected, setFileName, setIsDirty, setLibraryOpen, setWorkspace, setSavedLeaps, setHopPalette, nextNodeIdRef]);
 
     return { handleSave, handleSaveAs, handleOpen, handleNew, handleLoadFromLibrary};
 }

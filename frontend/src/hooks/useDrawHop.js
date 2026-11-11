@@ -113,7 +113,10 @@ export default function useDrawHop({
             }),
           });
     
-          const data = await resp.json();
+          const data = await resp.json().catch(() => null);
+          if (!resp.ok || !data) {
+            throw new Error(typeof data?.detail === 'string' ? data.detail : `Server returned ${resp.status}`);
+          }
     
           if (data.valid) {
             const zeroIndexed = [];

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { shiftCycleNotation } from '../lib/permUtils';
+import { formatOrder } from '../lib/format';
 
 import './NotebookEntry.css';
 
@@ -102,21 +103,37 @@ function EntryBody({ entry, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
 }
 
 function LeapGroupBody({ result }) {
+    // order_str is exact; older saved entries only have the number.
+    const order = formatOrder(result.order_str ?? result.order);
+
     return (
         <div className="leap-group-body">
-            <div className="leap-group-structure">
-                {result.structure}
-            </div>
+            {result.structure ? (
+                <div className="leap-group-structure">
+                    {result.structure}
+                </div>
+            ) : (
+                // The server ran out of time describing the group.
+                <div className="leap-group-structure leap-group-structure-missing">
+                    structure unavailable
+                </div>
+            )}
             <div className="leap-group-order">
-                Order: {result.order}
+                Order:{' '}
+                {order.text ?? (
+                    <span title={order.exact}>
+                        ≈ {order.mantissa} × 10<sup>{order.exponent}</sup>
+                    </span>
+                )}
             </div>
         </div>
     );
 }
 
 function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop, onPinHop, indexBase }) {
-    const [expanded, setExpanded] = useState(false);
     const PREVIEW_COUNT = 5;
+    const PAGE_SIZE = 200;
+    const [limit, setLimit] = useState(PREVIEW_COUNT);
 
     if (result.count === 0) {
         return (
@@ -126,13 +143,19 @@ function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
         );
     }
 
-    const hopsToShow = expanded ? result.hops : result.hops.slice(0, PREVIEW_COUNT);
-    const hasMore = result.hops.length > PREVIEW_COUNT;
+    // The server lists at most a fixed number of hops, and stops counting
+    // at some point: `count` can exceed the list, and `more` marks a count
+    // that is only a lower bound.
+    const listed = result.hops.length;
+    const total = `${result.count.toLocaleString('en-US')}${result.more ? '+' : ''}`;
+    const hopsToShow = result.hops.slice(0, limit);
+    const remaining = listed - hopsToShow.length;
 
     return (
         <div className="hops-body">
             <div className="hops-body-count">
-                {result.count} hop{result.count !== 1 ? 's' : ''} found
+                {total} hop{result.count !== 1 ? 's' : ''} found
+                {listed < result.count && ` (first ${listed.toLocaleString('en-US')} listed)`}
             </div>
             {hopsToShow.map((hop, i) => (
                 <HopItem
@@ -148,15 +171,23 @@ function HopsBody({ result, onHoverHop, onUnhoverHop, selectedHop, onPerformHop,
                     indexBase={indexBase}
                 />
             ))}
-            {hasMore && (
+            {remaining > 0 && (
                 <button
-                    onClick={() => setExpanded(!expanded)}
+                    onClick={() => setLimit(limit === PREVIEW_COUNT ? PAGE_SIZE : limit + PAGE_SIZE)}
                     className="hops-body-toggle"
                 >
-                    {expanded
-                        ? 'Show fewer'
-                        : `Show all ${result.count} hops...`
+                    {limit === PREVIEW_COUNT && listed <= PAGE_SIZE
+                        ? `Show all ${listed} hops...`
+                        : `Show more (${remaining.toLocaleString('en-US')} remaining)`
                     }
+                </button>
+            )}
+            {limit > PREVIEW_COUNT && listed > PREVIEW_COUNT && (
+                <button
+                    onClick={() => setLimit(PREVIEW_COUNT)}
+                    className="hops-body-toggle"
+                >
+                    Show fewer
                 </button>
             )}
         </div>

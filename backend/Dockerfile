@@ -2,7 +2,7 @@ FROM --platform=linux/amd64 sagemath/sagemath:latest
 
 USER root
 
-RUN sage -pip install --no-cache-dir fastapi 'uvicorn[standard]' pandas
+RUN sage -pip install --no-cache-dir fastapi 'uvicorn[standard]'
 
 WORKDIR /app
 

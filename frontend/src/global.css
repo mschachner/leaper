@@ -16,6 +16,10 @@ body {
 
   --color-text: #333;
   --color-text-muted: #5a5a5a;
+  --color-text-faint: #8a8578;
+  --color-tag-text: #3367d6;
+  --color-bg-error: #fdecea;
+  --color-text-error: #c0392b;
   --color-text-light: #fff;
   --color-bg-canvas: #f2ffed;
   --color-bg-canvas-dark: rgba(0,0,0,0.15);
@@ -33,7 +37,7 @@ body {
 
 
   /* Typography */
-  --font-sans: 'Helvetica';
+  --font-sans: 'Helvetica', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
 
   /* Spacing */
@@ -58,6 +62,10 @@ body.dark {
 
   --color-text: #d4d4d4;
   --color-text-muted: #9a9a9a;
+  --color-text-faint: #7b8296;
+  --color-tag-text: #9cc4ec;
+  --color-bg-error: #3b2226;
+  --color-text-error: #f1a59b;
   --color-text-light: #fff;
   --color-bg-canvas: #1a1f2e;
   --color-bg-canvas-dark: rgba(255,255,255,0.08);
@@ -173,7 +181,7 @@ body.dark {
 .notebookClearButton {
   background: none;
   border: none;
-  color: #aaa;
+  color: var(--color-text-faint);
   cursor: pointer;
   font-size: 12px;
 }
@@ -185,7 +193,7 @@ body.dark {
 
 .notebookEmpty {
   padding: var(--spacing-lg) var(--spacing-md);
-  color: #bbb;
+  color: var(--color-text-faint);
   font-size: 13px;
   text-align: center;
 }
@@ -228,7 +236,7 @@ body.dark {
 }
 
 .btn:active {
-  border-bottom: 1px solid black;
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 .modal {
@@ -431,5 +439,25 @@ body.dark {
 
   .library-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
+
+
+/*-------- Keyboard focus and motion ----------*/
+
+/* A visible ring for keyboard users; mouse clicks do not trigger it. Text
+   fields keep the browser's own ring. */
+:focus-visible:not(input):not(select):not(textarea) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
   }
 }

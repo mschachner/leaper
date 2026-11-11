@@ -73,7 +73,15 @@ occurrence (or a sample plus a structural argument, for the order-1152
 class) in the database. If the corpus changes, re-verify before trusting
 the aliases.
 
-## Beyond n = 8
+## The inverse problem
+
+The classification of leap groups that grew out of this database —
+proof notes, historical appendix, and the research scripts
+(`search_leaps.py`, `sieve_runner.py`, the matching sieves, witness
+checkers) — lives in `~/code/math/leaps/leaps-fable`. This directory
+keeps only what the app needs: database generation and verification.
+
+## Beyond n = 8 (database)
 
 n = 9 has 274,668 graphs (~40× the data) and K9 has 133,496 hops; static
 JSON stops being reasonable there. A server-backed database (SQLite +

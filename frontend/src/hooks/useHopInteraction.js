@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { leapFromLabels, leapArrows } from '../lib/permUtils';
 
 export default function useHopInteraction({ cyRef, showLabels, indexBase = 1, isDirected = false }) {
     const [selectedHop, setSelectedHop] = useState(null);
@@ -110,29 +111,15 @@ export default function useHopInteraction({ cyRef, showLabels, indexBase = 1, is
         cy.elements('.leap-arrow').remove();
     
         if (labelPerm) {
-          const n = labelPerm.length;
-          const drawn = new Set();
-    
-          for (let i = 0; i < n; i++) {
-            const target = labelPerm[i];
-            if (target === i) continue;
-    
-            const pairKey = [Math.min(i, target), Math.max(i, target)].join('.');
-            if (drawn.has(pairKey)) continue;
-            drawn.add(pairKey);
-    
-            const isTransposition = labelPerm[target] === i;
-    
+          for (const { source, target, double } of leapArrows(leapFromLabels(labelPerm))) {
             cy.add({
               group: 'edges',
               data: {
-                id: `leap-arrow-${i}`,
-                source: String(i),
+                id: `leap-arrow-${source}`,
+                source: String(source),
                 target: String(target),
               },
-              classes: isTransposition
-                ? 'leap-arrow leap-arrow-double'
-                : 'leap-arrow',
+              classes: double ? 'leap-arrow leap-arrow-double' : 'leap-arrow',
             });
           }
         }

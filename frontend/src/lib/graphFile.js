@@ -1,3 +1,5 @@
+import { graphSnapshot } from './cyGraph';
+
 /*
  * Read the current graph into .leap format.
  */
@@ -10,16 +12,8 @@ export function serializeGraph(
     savedLeaps = [],
     hopPalette = []
 ) {
-    const vertices = cy.nodes().map((node) => ({
-        id: parseInt(node.id(), 10),
-        x: node.position('x'),
-        y: node.position('y'),
-    }));
-
-    const edges = cy.edges().map((edge) => ({
-        source: parseInt(edge.data('source'),10),
-        target: parseInt(edge.data('target'),10),
-    }));
+    // Overlay arrows (working leap, hop being drawn) are not part of the graph.
+    const { vertices, edges } = graphSnapshot(cy);
 
     return {
         name,
@@ -80,11 +74,14 @@ export function validateGraphData(data) {
     }
 
     for (const v of data.vertices) {
-        if (typeof v.id !== 'number' || typeof v.x !== 'number' || typeof v.y !== 'number') {
+        if (typeof v?.id !== 'number' || typeof v.x !== 'number' || typeof v.y !== 'number') {
             return `Vertex ${JSON.stringify(v)} is missing "id", "x", or "y" fields.`;
         }
     }
     const vertexIds = new Set(data.vertices.map((v) => v.id));
+    if (vertexIds.size !== data.vertices.length) {
+        return 'Two vertices share the same "id".';
+    }
     for (const e of data.edges) {
         if (!vertexIds.has(e.source) || !vertexIds.has(e.target)) {
             return `Edge ${JSON.stringify(e)} references a vertex that doesn't exist.`

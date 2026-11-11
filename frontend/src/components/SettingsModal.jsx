@@ -22,8 +22,8 @@ function SettingsModal({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal settings-modal">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header">
           <span className="modal-title">Settings</span>

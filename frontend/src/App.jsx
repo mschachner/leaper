@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { deserializeGraph } from './lib/graphFile';
 import { checkHealth } from './lib/api';
 import { makeRandom } from './lib/graphGenerators';
+import {
+  graphData, graphSnapshot, graphEdges, graphElements,
+  restoreGraphElements, relabelVertices, sameGraph, isOverlay, OVERLAY_SELECTOR,
+} from './lib/cyGraph';
 
 import ControlPanel from './components/ControlPanel';
 import GraphLibraryModal from './components/GraphLibraryModal';
@@ -48,6 +52,7 @@ function App() {
   const [helpOpen, setHelpOpen]             = useState(false);
   const [sidebarOpen, setSidebarOpen]       = useState(false);
   const [page, setPage]                     = useState('editor');
+  const [nodeCount, setNodeCount]           = useState(0);
 
     
   const { cyRef, containerRef } = useCytoscape();
@@ -68,8 +73,8 @@ function App() {
 
   const {
     selectedHop, setSelectedHop,
-    labelPerm,
-    hopHistory,
+    labelPerm, setLabelPerm,
+    hopHistory, setHopHistory,
     savedLeaps, setSavedLeaps,
     selectHop, performHop, resetLabels,
     saveWorkingLeap, recallWorkingLeap, deleteSavedLeap,
@@ -93,36 +98,34 @@ function App() {
   // Graph data handler
   const getGraphData = useCallback(() => {
     const cy = cyRef.current;
-    if (!cy) return [];
-
-    const vertices = cy.nodes().map((n) => parseInt(n.id(), 10));
-    const edges = cy.edges().filter((e) =>
-      !e.hasClass('leap-arrow') && !e.hasClass('draw-hop-arrow')
-    ).map((e) => [
-      parseInt(e.data('source'), 10),
-      parseInt(e.data('target'), 10),
-    ]);
-
-    return { vertices, edges, directed: isDirected };
-  }, [isDirected]);
+    if (!cy) return null;
+    return graphData(cy, isDirected);
+  }, [cyRef, isDirected]);
 
   const getGraphSnapshot = useCallback(() => {
     const cy = cyRef.current;
     if (!cy) return null;
+    return graphSnapshot(cy);
+  }, [cyRef]);
 
-    const vertices = cy.nodes().map((n) => ({
-      id: parseInt(n.id(), 10),
-      x: n.position('x'),
-      y: n.position('y'),
-    }));
-    const edges = cy.edges().map((e) => ({
-      source: parseInt(e.data('source'), 10),
-      target: parseInt(e.data('target'), 10),
-    }));
-
-    return { vertices, edges };
+  // Swapping the whole graph in and out (snapshots) should not count as an
+  // edit, so dirty tracking is paused while this is set.
+  const suppressDirtyRef = useRef(false);
+  const withoutDirtying = useCallback((fn) => {
+    suppressDirtyRef.current = true;
+    try {
+      fn();
+    } finally {
+      suppressDirtyRef.current = false;
+    }
   }, []);
 
+  // Relabeler method: renumber the vertices 0..n-1 after a deletion or undo.
+  const relabelNodes = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    nextNodeIdRef.current = relabelVertices(cy, indexBase, isDirected);
+  }, [cyRef, indexBase, isDirected]);
 
   // Undo/redo helpers
   const undoStack = useRef([]);
@@ -132,73 +135,27 @@ function App() {
     const cy = cyRef.current;
     if (!cy) return;
 
-    undoStack.current.push(cy.json().elements);
+    undoStack.current.push(graphElements(cy));
     redoStack.current = [];
-  }, []);
+  }, [cyRef]);
 
   const undo = useCallback(() => {
     const cy = cyRef.current;
     if (!cy || undoStack.current.length === 0) return;
 
-    redoStack.current.push(cy.json().elements);
-    const prev = undoStack.current.pop();
-    cy.json({ elements: prev });
-  }, []);
+    redoStack.current.push(graphElements(cy));
+    restoreGraphElements(cy, undoStack.current.pop());
+    relabelNodes();
+  }, [cyRef, relabelNodes]);
 
   const redo = useCallback(() => {
     const cy = cyRef.current;
     if (!cy || redoStack.current.length === 0) return;
 
-    undoStack.current.push(cy.json().elements);
-    const next = redoStack.current.pop();
-    cy.json({ elements: next });
-  }, []);
-
-  // Relabeler method
-  const relabelNodes = useCallback(() => {
-    const cy = cyRef.current;
-    if (!cy) return;
-
-    const nodes = cy.nodes();
-    const edges = cy.edges();
-
-    // Cytoscape element ids are immutable; build oldId -> newId and rebuild graph
-    const idMap = {};
-    let nextNewId = 0;
-    nodes.forEach((n) => {
-      idMap[n.id()] = String(nextNewId++);
-    });
-
-    const nodeData = nodes.map((n) => ({
-      newId: idMap[n.id()],
-      position: n.position(),
-    }));
-    const edgeData = edges.map((e) => ({
-      source: idMap[e.data('source')],
-      target: idMap[e.data('target')],
-    }));
-
-    cy.elements().remove();
-
-    nodeData.forEach(({ newId, position }) => {
-      const displayLabel = indexBase === 0 ? newId : String(parseInt(newId, 10) + 1);
-      cy.add({
-        group: 'nodes',
-        data: { id: newId, displayLabel },
-        position: { x: position.x, y: position.y },
-      });
-    });
-    edgeData.forEach(({ source, target }) => {
-      const edge = cy.add({
-        group: 'edges',
-        data: { source, target },
-      });
-      if (isDirected) edge.addClass('directed');
-    });
-
-    nextNodeIdRef.current = nextNewId;
-    console.log(`Relabeled. Nodes are now ${cy.nodes().map((n) => n.id()).join(', ')}`);
-  }, [indexBase, isDirected]);
+    undoStack.current.push(graphElements(cy));
+    restoreGraphElements(cy, redoStack.current.pop());
+    relabelNodes();
+  }, [cyRef, relabelNodes]);
 
   // Workspace helpers
   const addWorkspaceEntry = useCallback((entry) => {
@@ -221,9 +178,13 @@ function App() {
     const cy = cyRef.current;
     if (!cy) return;
 
-    const markDirty = () => setIsDirty(true);
+    const markDirty = (evt) => {
+      if (suppressDirtyRef.current || isOverlay(evt.target)) return;
+      setIsDirty(true);
+    };
     cy.on('add remove position', markDirty);
-  }, []);
+    return () => cy.off('add remove position', markDirty);
+  }, [cyRef]);
 
   useEffect(() => {
     const onBeforeUnload = (e) => {
@@ -246,7 +207,7 @@ function App() {
      } else {
         cy.nodes().addClass('hide-label');
       }
-  },[showLabels]);
+  },[cyRef, showLabels]);
 
   useEffect(() => {
     const cy = cyRef.current;
@@ -260,7 +221,7 @@ function App() {
 
     cy.on('add', onAdd);
     return () => cy.off('add', onAdd)
-  }, [showLabels]);
+  }, [cyRef, showLabels]);
 
   // Update all node displayLabels when indexBase changes
   useEffect(() => {
@@ -275,7 +236,7 @@ function App() {
         node.data('displayLabel', String(nodeId + indexBase));
       }
     });
-  }, [indexBase, labelPerm]);
+  }, [cyRef, indexBase, labelPerm]);
 
   // Directed/undirected toggle
   const handleToggleDirected = useCallback(() => {
@@ -293,7 +254,7 @@ function App() {
     // Clear graph and toggle
     handleNew();
     setIsDirected((prev) => !prev);
-  }, [isDirty, workspace, handleNew]);
+  }, [cyRef, isDirty, workspace, handleNew]);
 
   // Add/remove .directed class on all edges when isDirected changes
   useEffect(() => {
@@ -301,11 +262,11 @@ function App() {
     if (!cy) return;
 
     if (isDirected) {
-      cy.edges().addClass('directed');
+      graphEdges(cy).addClass('directed');
     } else {
-      cy.edges().removeClass('directed');
+      graphEdges(cy).removeClass('directed');
     }
-  }, [isDirected]);
+  }, [cyRef, isDirected]);
 
   // When adding edges in directed mode, auto-apply .directed class
   useEffect(() => {
@@ -314,7 +275,7 @@ function App() {
 
     const onAddEdge = (evt) => {
       if (evt.target.isEdge && evt.target.isEdge() && isDirected) {
-        if (!evt.target.hasClass('draw-hop-arrow') && !evt.target.hasClass('leap-arrow')) {
+        if (!isOverlay(evt.target)) {
           evt.target.addClass('directed');
         }
       }
@@ -322,7 +283,7 @@ function App() {
 
     cy.on('add', onAddEdge);
     return () => cy.off('add', onAddEdge);
-  }, [isDirected]);
+  }, [cyRef, isDirected]);
 
   // Enable box selection
   useEffect(() => {
@@ -342,7 +303,7 @@ function App() {
       cy.userPanningEnabled(false);
       cy.autoungrabify(false);
     }
-  },[mode]);
+  },[cyRef, mode]);
 
   // Make workspace scrollable
   useEffect(() => {
@@ -351,6 +312,159 @@ function App() {
       el.scrollTop = el.scrollHeight;
     }
   }, [workspace]);
+
+  // Graph snapshots for reviewing computations
+
+  const savedGraphState = useRef(null);
+
+  const viewSnapshot = useCallback((snapshot) => {
+    const cy = cyRef.current;
+    if (!cy || !snapshot) return;
+
+    // Save current graph state (once: a second snapshot replaces the first
+    // on the canvas, but "back" still returns to the user's own graph).
+    if (!savedGraphState.current) {
+      savedGraphState.current = {
+        elements: graphElements(cy),
+        nextNodeId: nextNodeIdRef.current,
+        labelPerm,
+        hopHistory,
+      };
+    }
+
+    // Load snapshot
+    withoutDirtying(() => deserializeGraph(cy, snapshot, indexBase, isDirected));
+    setSnapshotView(snapshot);
+  }, [cyRef, indexBase, isDirected, labelPerm, hopHistory, withoutDirtying])
+
+  const exitSnapshotView = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy || !savedGraphState.current) return;
+
+    // Restore saved graph state, including the working leap, which the
+    // graph swap resets.
+    const saved = savedGraphState.current;
+    savedGraphState.current = null;
+    withoutDirtying(() => restoreGraphElements(cy, saved.elements));
+    nextNodeIdRef.current = saved.nextNodeId;
+    setLabelPerm(saved.labelPerm);
+    setHopHistory(saved.hopHistory);
+    setSnapshotView(null);
+  }, [cyRef, withoutDirtying, setLabelPerm, setHopHistory]);
+
+  // Snapshot-aware hop hover for workspace entries. The snapshot is only
+  // swapped in when it differs from the graph on the canvas; hovering a hop
+  // of the current graph just highlights it in place.
+  const hoverSwappedRef = useRef(false);
+
+  const hoverWorkspaceHop = useCallback((hop, snapshot) => {
+    const cy = cyRef.current;
+    if (cy && snapshot && !savedGraphState.current && !sameGraph(cy, snapshot, isDirected)) {
+      viewSnapshot(snapshot);
+      hoverSwappedRef.current = true;
+    }
+    selectHop(hop);
+  }, [cyRef, isDirected, viewSnapshot, selectHop]);
+
+  const unhoverWorkspaceHop = useCallback(() => {
+    setSelectedHop(null);
+    if (hoverSwappedRef.current) {
+      hoverSwappedRef.current = false;
+      exitSnapshotView();
+    }
+  }, [exitSnapshotView, setSelectedHop]);
+
+  // Performing a workspace hop only makes sense on the graph it belongs to.
+  // If hovering has swapped that graph in, clicking keeps it on the canvas
+  // (the banner offers the way back) instead of undoing the hop on mouse-out.
+  const performWorkspaceHop = useCallback((hop, snapshot) => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    if (snapshot && !sameGraph(cy, snapshot, isDirected)) return;
+    hoverSwappedRef.current = false;
+    performHop(hop);
+  }, [cyRef, isDirected, performHop]);
+
+  // Guarded hop hover/perform for palette (no snapshot available)
+  const hoverPaletteHop = useCallback((hop) => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    if (hop.one_line.length !== cy.nodes().length) return;
+    selectHop(hop);
+  }, [cyRef, selectHop]);
+
+  const performPaletteHop = useCallback((hop) => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    if (hop.one_line.length !== cy.nodes().length) return;
+    performHop(hop);
+  }, [cyRef, performHop]);
+
+  // Hop palette helpers
+
+  const addToPalette = useCallback((hop, source = 'computed') => {
+    setHopPalette((prev) => {
+      const exists = prev.some((h) => h.one_line.join(',') === hop.one_line.join(','));
+      if (exists) return prev;
+      const name = hop.name || hop.cycle;
+      return [...prev, { name, one_line: hop.one_line, cycle: hop.cycle, source }];
+    });
+    setIsDirty(true);
+  }, []);
+
+  const removeFromPalette = useCallback((index) => {
+    setHopPalette((prev) => prev.filter((_, i) => i !== index));
+    setIsDirty(true);
+  }, []);
+
+  // Check backend health. A sleeping backend can take a while to wake, so
+  // keep trying for a bit before leaving the offline banner up.
+  useEffect(() => {
+    let live = true;
+    let timer = null;
+    const delays = [5000, 10000, 20000, 30000];
+    const attempt = (i) => {
+      checkHealth(i === 0 ? 5000 : 15000).then((ok) => {
+        if (!live) return;
+        setBackendOnline(ok);
+        if (!ok && i < delays.length) {
+          timer = setTimeout(() => attempt(i + 1), delays[i]);
+        }
+      });
+    };
+    attempt(0);
+    return () => { live = false; clearTimeout(timer); };
+  }, []);
+
+  // Empty canvas placeholder
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const onCount = () => {
+      setCanvasEmpty(cy.nodes().length === 0);
+      setNodeCount(cy.nodes().length);
+    };
+    cy.on('add remove', onCount);
+    return () => cy.off('add remove', onCount)
+  }, [cyRef]);
+
+  const {
+    drawingHop, setDrawingHop,
+    handleDrawHopTap,
+    handleUndoDrawAssignment,
+    handleVerifyHop,
+    handlePerformDrawnHop
+  } = useDrawHop({
+    cyRef,
+    getGraphData,
+    getGraphSnapshot,
+    addWorkspaceEntry: addWorkspaceEntry,
+    addToPalette,
+    performHop,
+    showToast,
+  });
 
   // Handle user actions
   const handleTap = useCallback((evt) => {
@@ -361,12 +475,11 @@ function App() {
     if (mode === 'addVertex') {
       if (evt.target === cy) {
         const pos = evt.position;
-        const id = String(nextNodeIdRef.current++);
-        const displayLabel = indexBase === 0 ? id : String(parseInt(id, 10) + 1);
         saveSnapshot();
+        const id = String(nextNodeIdRef.current++);
         cy.add({
           group: 'nodes',
-          data: { id, displayLabel },
+          data: { id, displayLabel: String(parseInt(id, 10) + indexBase) },
           position: { x: pos.x, y: pos.y },
         });
       }
@@ -378,7 +491,7 @@ function App() {
           setEdgeSource(clickedId);
           evt.target.addClass('edge-source');
         } else if (clickedId !== edgeSource) {
-          const existing = cy.edges().filter((e) => {
+          const existing = graphEdges(cy).filter((e) => {
             if (isDirected) {
               // Directed: only check exact source→target
               return e.data('source') === edgeSource && e.data('target') === clickedId;
@@ -405,7 +518,7 @@ function App() {
         handleDrawHopTap(clickedId);
       }
     }
-  }, [mode, edgeSource]);
+  }, [cyRef, mode, edgeSource, snapshotView, indexBase, isDirected, saveSnapshot, handleDrawHopTap]);
 
   useEffect(() => {
     const cy = cyRef.current;
@@ -413,167 +526,81 @@ function App() {
 
     cy.on('tap', handleTap);
     return () => cy.off('tap', handleTap);
-  }, [handleTap]);
+  }, [cyRef, handleTap]);
 
+  // Leaving edge mode (or the graph changing under it) forgets a half-drawn edge.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || edgeSource !== null) return;
+    cy.nodes('.edge-source').removeClass('edge-source');
+  }, [cyRef, edgeSource]);
 
   const handleDelete = useCallback(() => {
     const cy = cyRef.current;
-    if (!cy) return;
+    if (!cy || snapshotView) return;
 
-    cy.elements(':selected').remove();
+    const selected = cy.elements(':selected').not(OVERLAY_SELECTOR);
+    if (selected.length === 0) return;
+
+    saveSnapshot();
+    selected.remove();
+    setEdgeSource(null);
     relabelNodes();
-  }, [relabelNodes]);
-
-  // Graph snapshots for reviewing computations
-
-  const savedGraphState = useRef(null);
-
-  const viewSnapshot = useCallback((snapshot) => {
-    const cy = cyRef.current;
-    if (!cy || !snapshot) return;
-
-    // Save current graph state
-    savedGraphState.current = {
-      elements: cy.json().elements,
-      nextNodeId: nextNodeIdRef.current,
-    }
-
-    // Load snapshot
-    deserializeGraph(cy, snapshot, indexBase, isDirected);
-    setSnapshotView(snapshot);
-  }, [indexBase, isDirected])
-
-  const exitSnapshotView = useCallback(() => {
-    const cy = cyRef.current;
-    if (!cy || !savedGraphState.current) return;
-
-    // Restore saved graph state
-    cy.json({ elements: savedGraphState.current.elements });
-    nextNodeIdRef.current = savedGraphState.current.nextNodeId;
-    savedGraphState.current = null;
-    setSnapshotView(null);
-  }, []);
-
-  // Snapshot-aware hop hover for workspace entries
-  const hoverWorkspaceHop = useCallback((hop, snapshot) => {
-    if (snapshot && !savedGraphState.current) {
-      viewSnapshot(snapshot);
-    }
-    selectHop(hop);
-  }, [viewSnapshot, selectHop]);
-
-  const unhoverWorkspaceHop = useCallback(() => {
-    setSelectedHop(null);
-    if (savedGraphState.current) exitSnapshotView();
-  }, [exitSnapshotView]);
-
-  // Guarded hop hover/perform for palette (no snapshot available)
-  const hoverPaletteHop = useCallback((hop) => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    if (hop.one_line.length !== cy.nodes().length) return;
-    selectHop(hop);
-  }, [selectHop]);
-
-  const performPaletteHop = useCallback((hop) => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    if (hop.one_line.length !== cy.nodes().length) return;
-    performHop(hop);
-  }, [performHop]);
-
-  // Hop palette helpers
-
-  const addToPalette = useCallback((hop, source = 'computed') => {
-    setHopPalette((prev) => {
-      const exists = prev.some((h) => h.one_line.join(',') === hop.one_line.join(','));
-      if (exists) return prev;
-      const name = hop.name || hop.cycle;
-      return [...prev, { name, one_line: hop.one_line, cycle: hop.cycle, source }];
-    });
-    setIsDirty(true);
-  }, []);
-
-  const removeFromPalette = useCallback((index) => {
-    setHopPalette((prev) => prev.filter((_, i) => i !== index));
-    setIsDirty(true);
-  }, []);
+  }, [cyRef, snapshotView, saveSnapshot, relabelNodes]);
 
   // Keyboard shortcuts
 
-  const shortcuts = useMemo(() => [
-    {
-      match: (e) => e.key === 'Delete' || e.key === 'Backspace',
-      action: () => { saveSnapshot(); handleDelete();}
-    },
-    {
-      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey,
-      action: (e) => { e.preventDefault(); undo(); relabelNodes();}
-    },
-    {
-      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey,
-      action: (e) => { e.preventDefault(); redo; relabelNodes(); }
-    },
-    {
-      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey,
-      action: (e) => { e.preventDefault(); handleSave(); }
-    },
-    {
-      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 's' && e.shiftKey,
-      action: (e) => { e.preventDefault(); handleSaveAs(); }
-    },
-    {
-      match: (e) => (e.metaKey || e.ctrlKey) && e.key === 'o',
-      action: (e) => { e.preventDefault(); handleSaveAs(); }
-    },
-    {
-      match: (e) => e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName),
-      action: () => setHelpOpen(true)
-    },
-    {
-      match: (e) => e.key === 'Escape',
-      action: () => {
-        setHelpOpen(false);
-        setLibraryOpen(false);
-        setRandomizerOpen(false);
-        setSettingsOpen(false)
-      }
-    },
-  ], [saveSnapshot, handleDelete, undo, redo, relabelNodes, handleSave, handleSaveAs, handleOpen, settingsOpen, libraryOpen, randomizerOpen, helpOpen]);
+  const shortcuts = useMemo(() => {
+    const typing = () => {
+      const el = document.activeElement;
+      return !!el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable);
+    };
+    const mod = (e) => e.metaKey || e.ctrlKey;
+    const key = (e) => e.key.toLowerCase();
+    const editing = () => page === 'editor' && !snapshotView;
+
+    return [
+      {
+        match: (e) => (e.key === 'Delete' || e.key === 'Backspace') && !typing() && editing(),
+        action: (e) => { e.preventDefault(); handleDelete(); }
+      },
+      {
+        match: (e) => mod(e) && key(e) === 'z' && !e.shiftKey && !typing() && editing(),
+        action: (e) => { e.preventDefault(); undo(); }
+      },
+      {
+        match: (e) => mod(e) && ((key(e) === 'z' && e.shiftKey) || key(e) === 'y') && !typing() && editing(),
+        action: (e) => { e.preventDefault(); redo(); }
+      },
+      {
+        match: (e) => mod(e) && key(e) === 's' && !e.shiftKey && page === 'editor',
+        action: (e) => { e.preventDefault(); handleSave(); }
+      },
+      {
+        match: (e) => mod(e) && key(e) === 's' && e.shiftKey && page === 'editor',
+        action: (e) => { e.preventDefault(); handleSaveAs(); }
+      },
+      {
+        match: (e) => mod(e) && key(e) === 'o' && page === 'editor',
+        action: (e) => { e.preventDefault(); handleOpen(); }
+      },
+      {
+        match: (e) => e.key === '?' && !typing(),
+        action: () => setHelpOpen(true)
+      },
+      {
+        match: (e) => e.key === 'Escape',
+        action: () => {
+          setHelpOpen(false);
+          setLibraryOpen(false);
+          setRandomizerOpen(false);
+          setSettingsOpen(false)
+        }
+      },
+    ];
+  }, [page, snapshotView, handleDelete, undo, redo, handleSave, handleSaveAs, handleOpen]);
 
   useKeyboardShortcuts(shortcuts);
-
-  // Check backend health
-  useEffect(() => {
-    checkHealth().then(setBackendOnline);
-  }, []);
-
-  // Empty canvas placeholder
-
-  useEffect(() => {
-    const cy = cyRef.current;
-    if (!cy) return;
-
-    const canvasEmpty = () => setCanvasEmpty(cy.nodes().length === 0);
-    cy.on('add remove', canvasEmpty);
-    return () => cy.off('add remove', canvasEmpty)
-  }, []);
-
-  const {
-    drawingHop, setDrawingHop,
-    handleDrawHopTap,
-    handleUndoDrawAssignment,
-    handleVerifyHop,
-    handlePerformDrawnHop
-  } = useDrawHop({
-    cyRef,
-    getGraphData,
-    getGraphSnapshot,
-    addWorkspaceEntry: addWorkspaceEntry,
-    addToPalette,
-    performHop,
-    showToast,
-  });
 
   // Randomizer
   const handleRandom = useCallback(() => {
@@ -595,7 +622,7 @@ function App() {
     setWorkspace([]);
     setSavedLeaps([]);
     setHopPalette([]);
-  }, [cyRef, isDirty, indexBase, randomValues, nextNodeIdRef]);
+  }, [cyRef, isDirty, isDirected, indexBase, randomValues, nextNodeIdRef, setFileName, setSavedLeaps]);
 
   return (
     <div className="appRoot">
@@ -654,7 +681,7 @@ function App() {
             setEdgeSource={setEdgeSource}
             setSelectedHop={setSelectedHop}
             onOpenSettings={() => setSettingsOpen(true)}
-            cyRef={cyRef}
+            nodeCount={nodeCount}
           />
           {/* Snapshot banner */}
           {snapshotView && (
@@ -706,7 +733,7 @@ function App() {
             onRemove={removeFromPalette}
             onPerform={performPaletteHop}
             indexBase={indexBase}
-            nodeCount={cyRef.current ? cyRef.current.nodes().length : 0}
+            nodeCount={nodeCount}
           />
           <ControlPanel
             getGraphData={getGraphData}
@@ -746,7 +773,7 @@ function App() {
                   onHoverHop={(hop) => hoverWorkspaceHop(hop, entry.graphSnapshot)}
                   onUnhoverHop={unhoverWorkspaceHop}
                   selectedHop={selectedHop}
-                  onPerformHop={performHop}
+                  onPerformHop={(hop) => performWorkspaceHop(hop, entry.graphSnapshot)}
                   onViewSnapshot={viewSnapshot}
                   onPinHop={addToPalette}
                   indexBase={indexBase}

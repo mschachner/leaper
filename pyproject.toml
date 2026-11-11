@@ -18,3 +18,9 @@ Home = "https://example.com"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    # The backend forks from a threaded process on purpose (see backend/app.py).
+    "ignore:.*multi-threaded.*fork.*:DeprecationWarning",
+]

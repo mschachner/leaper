@@ -61,7 +61,7 @@ export async function save(jsonString) {
  */
 
 export async function openFile() {
-    if (!hasFileSystemAccess) {
+    if (!hasFileSystemAccess()) {
         return openFileFallback();
     }
 
@@ -78,6 +78,14 @@ export async function openFile() {
     const file = await handle.getFile();
     const text = await file.text();
     return { data: JSON.parse(text), name: handle.name };
+}
+
+/*
+ * Did the user dismiss a file picker? (Not an error worth reporting.)
+ */
+
+export function isPickerCancel(err) {
+    return err?.name === 'AbortError';
 }
 
 /*
@@ -109,10 +117,12 @@ function openFileFallback() {
         input.onchange = async () => {
             const file = input.files[0];
             if (!file) return reject(new Error('No file selected'));
-            const text = await file.text();
-            resolve({
-                data: JSON.parse(text), name: file.name
-            });
+            try {
+                const text = await file.text();
+                resolve({ data: JSON.parse(text), name: file.name });
+            } catch (err) {
+                reject(err);
+            }
         };
         input.click();
     })

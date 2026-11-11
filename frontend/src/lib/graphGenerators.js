@@ -304,46 +304,38 @@ export function makeComplete(n) {
   }
   
   /**
-   * Pappus graph: a bipartite 3-regular graph on 18 vertices.
+   * A cubic Hamiltonian graph from its LCF notation: n vertices on a cycle,
+   * with vertex i also joined to vertex i + shifts[i mod shifts.length].
+   */
+  function makeLCF(n, shifts) {
+    const vertices = polygonLayout(n, 150, 150, 130);
+    const seen = new Set();
+    const edges = [];
+    const add = (a, b) => {
+      const key = a < b ? `${a}-${b}` : `${b}-${a}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      edges.push({ source: a, target: b });
+    };
+    for (let i = 0; i < n; i++) add(i, (i + 1) % n);
+    for (let i = 0; i < n; i++) add(i, (((i + shifts[i % shifts.length]) % n) + n) % n);
+    return { vertices, edges };
+  }
+
+  /**
+   * Pappus graph: the Levi graph of the Pappus configuration.
+   * A bipartite 3-regular graph on 18 vertices, LCF [5, 7, -7, 7, -7, -5]^3.
    */
   export function makePappus() {
-    const outer = polygonLayout(9, 150, 150, 130);
-    const inner = polygonLayout(9, 150, 150, 60);
-    const innerShifted = inner.map((v, i) => ({ ...v, id: i + 9 }));
-    const vertices = [...outer, ...innerShifted];
-  
-    const edges = [
-      // Outer cycle
-      ...Array.from({ length: 9 }, (_, i) => ({ source: i, target: (i + 1) % 9 })),
-      // Inner connections (each inner vertex connects to the one 4 steps ahead)
-      ...Array.from({ length: 9 }, (_, i) => ({ source: i + 9, target: ((i + 4) % 9) + 9 })),
-      // Spokes
-      ...Array.from({ length: 9 }, (_, i) => ({ source: i, target: i + 9 })),
-    ];
-  
-    return { vertices, edges };
+    return makeLCF(18, [5, 7, -7, 7, -7, -5]);
   }
   
   /**
    * Heawood graph: the Levi graph of the Fano plane.
-   * A bipartite 3-regular graph on 14 vertices.
+   * A bipartite 3-regular graph on 14 vertices, LCF [5, -5]^7.
    */
   export function makeHeawood() {
-    const outer = polygonLayout(7, 150, 150, 130);
-    const inner = polygonLayout(7, 150, 150, 60);
-    const innerShifted = inner.map((v, i) => ({ ...v, id: i + 7 }));
-    const vertices = [...outer, ...innerShifted];
-  
-    const edges = [
-      // Outer cycle
-      ...Array.from({ length: 7 }, (_, i) => ({ source: i, target: (i + 1) % 7 })),
-      // Inner star (connect every 2nd)
-      ...Array.from({ length: 7 }, (_, i) => ({ source: i + 7, target: ((i + 2) % 7) + 7 })),
-      // Spokes
-      ...Array.from({ length: 7 }, (_, i) => ({ source: i, target: i + 7 })),
-    ];
-  
-    return { vertices, edges };
+    return makeLCF(14, [5, -5]);
   }
 
   /**

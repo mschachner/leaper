@@ -46,7 +46,7 @@ const SECTIONS = [
 ];
 
 function HelpModal({ onClose }) {
-    const [activeSection, setActiveSection] = useState('getting-started');
+    const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
     const contentRef = useRef(null);
 
     const scrollTo = (id) => {
@@ -56,8 +56,8 @@ function HelpModal({ onClose }) {
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal help-modal">
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal help-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Help</h2>
                     <button onClick={onClose} className="modal-close">✕</button>

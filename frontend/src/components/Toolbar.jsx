@@ -8,8 +8,8 @@ function Toolbar({
     onVerifyHop, onPerformDrawnHop,
     onUndoDrawAssignment,
     setEdgeSource, setSelectedHop,
-    onOpenSettings, 
-    cyRef
+    onOpenSettings,
+    nodeCount
 }) {
     return (
       <div className="toolbar">
@@ -34,7 +34,7 @@ function Toolbar({
         {mode === 'drawHop' && drawingHop && (
           <DrawHopBar
             drawingHop={drawingHop}
-            nodeCount={cyRef.current ? cyRef.current.nodes().length : 0}
+            nodeCount={nodeCount}
             onVerifyAndSave={onVerifyHop}
             onPerform={onPerformDrawnHop}
             onCancel={() => {

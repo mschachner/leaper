@@ -75,17 +75,19 @@
     height:100%;
   }
 .segment-button {
-    padding: var(--spacing-xs);
-    border: 1px solid black;
-    background: #fff;
-    color: #555;
+    padding: var(--spacing-xs) 10px;
+    min-width: 96px;
+    text-align: center;
+    border: 2px solid var(--color-border-strong);
+    background: var(--color-bg-surface);
+    color: var(--color-text);
     cursor: pointer;
     font-weight: normal;
   }
   
 .segment-button.active {
     background: var(--color-primary);
-    border: 2px solid black;
+    border: 2px solid var(--color-border-strong);
     color: #fff;
     cursor: default;
     font-weight: bold;

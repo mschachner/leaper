@@ -4,6 +4,9 @@ import { API_URL } from '../lib/api';
 
 import './ControlPanel.css';
 
+// The server's limit on n (LEAPER_MAX_LEAP_N).
+const MAX_LEAP_N = 100;
+
 function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -40,7 +43,7 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
 
     const runComputation = async (url, type, params) => {
         const graphData = getGraphData();
-        if (!graphData || graphData.vertices.length == 0) {
+        if (!graphData || graphData.vertices.length === 0) {
             setError('Draw a graph first.');
             return;
         }
@@ -56,14 +59,16 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
         try {
             const resp = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json '},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(graphData),
                 signal: controller.signal,
             });
 
             if (!resp.ok) {
                 const detail = await resp.json().catch(() => null);
-                throw new Error(detail?.detail || `Server returned ${resp.status}`);
+                // FastAPI reports its own validation errors as a list.
+                const message = typeof detail?.detail === 'string' ? detail.detail : null;
+                throw new Error(message || `Server returned ${resp.status}`);
             }
 
             const data = await resp.json();
@@ -73,7 +78,8 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
             addEntry(entry);
         } catch (err) {
             if (err.name !== 'AbortError') {
-                setError(err.message);
+                // fetch reports an unreachable server as a bare TypeError.
+                setError(err instanceof TypeError ? 'Could not reach the server.' : err.message);
             }
         } finally {
             stopTimer();
@@ -107,7 +113,8 @@ function ControlPanel({ getGraphData, getGraphSnapshot, addEntry }) {
                     type="number"
                     min={1}
                     value={leapN}
-                    onChange={(e) => setleapN(Math.max(1, parseInt(e.target.value,10) || 1))}
+                    max={MAX_LEAP_N}
+                    onChange={(e) => setleapN(Math.min(MAX_LEAP_N, Math.max(1, parseInt(e.target.value,10) || 1)))}
                     disabled={loading}
                     className="control-panel-input"
                 />
